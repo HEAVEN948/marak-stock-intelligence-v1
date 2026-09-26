@@ -117,6 +117,7 @@
 
     <div class="tabbar">
       <button class="tabbtn active" data-tab="structure">Structure</button>
+      <button class="tabbtn" data-tab="smartmoney">Smart Money</button>
       <button class="tabbtn" data-tab="dna">Stock DNA</button>
       <button class="tabbtn" data-tab="psych">Psychology</button>
       <button class="tabbtn" data-tab="why">Why is it moving</button>
@@ -128,6 +129,10 @@
 
     <!-- STRUCTURE -->
     <div class="tabpane active" id="tab-structure">
+      <div class="card" style="border-color:var(--orange)">
+        <h3>What changed today</h3>
+        <div id="whatChangedToday"></div>
+      </div>
       <div class="card">
         <h3>Price & market structure</h3>
         <canvas id="priceChart"></canvas>
@@ -147,7 +152,32 @@
           <div class="kv"><span>Gap (last session)</span><span id="s_gap">-</span></div>
         </div>
       </div>
+      <div class="card">
+        <h3>Market structure (swings, BOS/CHOCH)</h3>
+        <div id="marketStructurePanel"></div>
+        <div class="footNote">Inferred from swing highs/lows in the loaded bars — reads as price action, not a signal.</div>
+      </div>
+      <div class="card">
+        <h3>Liquidity map</h3>
+        <div id="liquidityMap" style="font-family:'Courier New',monospace;font-size:12.5px"></div>
+      </div>
+      <div class="card">
+        <h3>Regime</h3>
+        <div id="regimeCurrent" style="margin-bottom:10px"></div>
+        <div id="regimeHistory" style="font-family:'Courier New',monospace;font-size:12.5px"></div>
+        <div class="footNote">Mechanical classification from trend/ADX/volatility/volume rules — not a forecast of what comes next.</div>
+      </div>
     </div>
+
+    <!-- SMART MONEY -->
+    <div class="tabpane" id="tab-smartmoney">
+      <div class="card">
+        <h3>Smart money / accumulation read</h3>
+        <div id="smartMoneyPanel"></div>
+        <div class="footNote">This is an inference engine built only from price, volume and delivery% — it has no direct knowledge of who is actually trading. Treat "accumulation"/"distribution" as a pattern label, not a confirmed institutional footprint.</div>
+      </div>
+    </div>
+
 
     <!-- STOCK DNA -->
     <div class="tabpane" id="tab-dna">
@@ -515,6 +545,17 @@ function swingLevels(bars, lookback=60, strength=3){
   return {highs, lows};
 }
 
+// Ordered swing points (for HH/HL/LH/LL, BOS/CHOCH) — walks the whole loaded history, not just a recent window.
+function getSwingPoints(bars, strength=3){
+  const points = [];
+  for(let i=strength;i<bars.length-strength;i++){
+    const seg = bars.slice(i-strength,i+strength+1);
+    if(bars[i].high === Math.max(...seg.map(b=>b.high))) points.push({i, price: bars[i].high, type:'high', date: bars[i].date});
+    if(bars[i].low === Math.min(...seg.map(b=>b.low))) points.push({i, price: bars[i].low, type:'low', date: bars[i].date});
+  }
+  return points.sort((a,b)=>a.i-b.i);
+}
+
 /* ============ LOAD SYMBOL / RENDER ============ */
 function loadSymbol(sym){
   const rec = DB[sym];
@@ -572,6 +613,13 @@ function loadSymbol(sym){
 
   // PSYCHOLOGY
   renderPsychology(bars, calc, li, volX, trendRegime);
+
+  // NEW: Smart Money, Market Structure, Liquidity Map, Regime, What Changed Today
+  renderSmartMoney(bars, calc, li, volX);
+  renderMarketStructure(bars, calc, li);
+  renderLiquidityMap(bars, li);
+  renderRegimeHistory(bars, calc);
+  renderWhatChangedToday(bars, calc, li, volX, nearestRes, nearestSup, breakout, breakdown);
 
   // WHY tab date list
   const whySel = document.getElementById('whyDateSelect');
@@ -693,6 +741,257 @@ function renderPsychology(bars, calc, li, volX, trendRegime){
     `<div class="statusline"><span>${label}</span><span class="tag ${cls}">${val}</span></div>`).join('');
   const summary = `Price is showing a ${trendRegime.replace(/🟢|🔴|🟡/g,'').trim().toLowerCase()} structure with ${volX>1.2?'increasing':'unremarkable'} participation. Momentum is ${calc.rsi[li]>55?'positive':calc.rsi[li]<45?'weak':'neutral'}. Institutional flow, options positioning and news sentiment need the Upstox connection (and a news source) to populate — currently ${upstoxConnected?'connected':'not connected'}.`;
   document.getElementById('psychSummary').textContent = summary;
+}
+
+/* ============ SMART MONEY / ACCUMULATION ENGINE ============ */
+function renderSmartMoney(bars, calc, li, volX){
+  const panel = document.getElementById('smartMoneyPanel');
+  if(li<20 || calc.vol20[li]==null){ panel.innerHTML = '<div class="muted">Need at least ~20 bars for this read.</div>'; return; }
+  const priceUp = bars[li].close > bars[li-1].close;
+  const volHigh = volX!=null && volX > 1.2;
+  const volLow = volX!=null && volX < 0.8;
+
+  let quadrant, quadCls;
+  if(priceUp && volHigh){ quadrant = 'ACCUMULATION (price up, volume up)'; quadCls='g'; }
+  else if(priceUp && volLow){ quadrant = 'Rally lacks volume support'; quadCls='y'; }
+  else if(!priceUp && volHigh){ quadrant = 'DISTRIBUTION (price down, volume up)'; quadCls='r'; }
+  else if(!priceUp && volLow){ quadrant = 'Decline lacks volume — possible exhaustion'; quadCls='y'; }
+  else { quadrant = 'Neutral'; quadCls='n'; }
+
+  // Delivery % trend (needs DELIV_PER column)
+  const delivSeries = bars.slice(Math.max(0,li-9), li+1).map(b=>b.delivPer).filter(v=>v!=null);
+  let delivTrend = 'n/a (no DELIV_PER column)';
+  if(delivSeries.length>=3){
+    const chg = delivSeries[delivSeries.length-1] - delivSeries[0];
+    delivTrend = `${chg>=0?'↑ rising':'↓ falling'} (${delivSeries[0].toFixed(0)}% → ${delivSeries[delivSeries.length-1].toFixed(0)}%)`;
+  }
+
+  const cmfTrend = (li>=25 && calc.cmf[li]!=null && calc.cmf[li-5]!=null) ? (calc.cmf[li]>calc.cmf[li-5]?'Rising':'Falling') : 'n/a';
+  const obvTrend = obvSlopeLabel(calc.obv);
+
+  // Breakout volume confirmation / absorption / distribution-at-highs / failed breakout
+  const recentHigh20 = Math.max(...bars.slice(Math.max(0,li-20),li).map(b=>b.high));
+  const breakoutConfirmed = bars[li].close > recentHigh20 && volHigh;
+  const chgP = (bars[li].close-bars[li-1].close)/bars[li-1].close*100;
+  const range = bars[li].high-bars[li].low;
+  const possibleAbsorption = volHigh && Math.abs(chgP) < 0.5 && range>0;
+  const near20High = bars[li].close > recentHigh20*0.97;
+  const possibleDistribution = near20High && cmfTrend==='Falling' && obvTrend.includes('Falling');
+  const failedBreakout = li>=2 && bars[li-1].close > Math.max(...bars.slice(Math.max(0,li-21),li-1).map(b=>b.high)) && bars[li].close < bars[li-1].close && bars[li].close < Math.max(...bars.slice(Math.max(0,li-21),li-1).map(b=>b.high));
+
+  // Evidence strength: how many sub-signals agree with the quadrant's direction
+  const isBullishCase = quadrant.startsWith('ACCUMULATION') || quadrant.startsWith('Rally');
+  const isBearishCase = quadrant.startsWith('DISTRIBUTION') || quadrant.startsWith('Decline');
+  let agree=0, total=0;
+  if(isBullishCase || isBearishCase){
+    const checks = [
+      volHigh || volLow,
+      cmfTrend==='Rising' ? isBullishCase : cmfTrend==='Falling' ? isBearishCase : null,
+      obvTrend.includes('Rising') ? isBullishCase : obvTrend.includes('Falling') ? isBearishCase : null,
+      delivSeries.length>=3 ? (delivTrend.startsWith('↑') ? isBullishCase : isBearishCase) : null,
+      breakoutConfirmed ? isBullishCase : null,
+      !failedBreakout
+    ].filter(v=>v!==null);
+    total = checks.length; agree = checks.filter(Boolean).length;
+  }
+  const evidence = total? Math.round(agree/total*100) : null;
+
+  panel.innerHTML = `
+    <div class="statusline"><span style="font-weight:700;font-size:15px">Smart Money Status</span><span class="tag ${quadCls}">${quadrant}</span></div>
+    <div class="kv"><span>Price</span><span>${priceUp?'↑':'↓'} ${chgP>=0?'+':''}${chgP.toFixed(2)}%</span></div>
+    <div class="kv"><span>Volume vs 20d avg</span><span>${volX!=null?volX.toFixed(2)+'x':'-'}</span></div>
+    <div class="kv"><span>Delivery % trend</span><span>${delivTrend}</span></div>
+    <div class="kv"><span>CMF trend</span><span>${cmfTrend}</span></div>
+    <div class="kv"><span>OBV trend</span><span>${obvTrend}</span></div>
+    <div class="kv"><span>Breakout volume confirmation</span><span>${breakoutConfirmed?'🟢 Yes':'— none'}</span></div>
+    <div class="kv"><span>Possible absorption</span><span>${possibleAbsorption?'🟡 Flagged (high vol, small move)':'— none'}</span></div>
+    <div class="kv"><span>Possible distribution at highs</span><span>${possibleDistribution?'🔴 Flagged':'— none'}</span></div>
+    <div class="kv"><span>Failed breakout</span><span>${failedBreakout?'🔴 Flagged':'— none'}</span></div>
+    ${evidence!=null ? `<div class="kv"><span style="font-weight:700">Evidence strength</span><span style="font-weight:700">${evidence}/100</span></div>` : ''}
+  `;
+}
+
+/* ============ MARKET STRUCTURE ENGINE (HH/HL/LH/LL, BOS/CHOCH, equal highs/lows) ============ */
+function renderMarketStructure(bars, calc, li){
+  const panel = document.getElementById('marketStructurePanel');
+  const points = getSwingPoints(bars, 3);
+  if(points.length<4){ panel.innerHTML = '<div class="muted">Not enough swing points yet — need more bars.</div>'; return; }
+
+  const swingHighs = points.filter(p=>p.type==='high');
+  const swingLows = points.filter(p=>p.type==='low');
+  const lastHighs = swingHighs.slice(-2), lastLows = swingLows.slice(-2);
+
+  let structureLabel = [];
+  if(lastHighs.length===2) structureLabel.push(lastHighs[1].price > lastHighs[0].price ? 'HH' : 'LH');
+  if(lastLows.length===2) structureLabel.push(lastLows[1].price > lastLows[0].price ? 'HL' : 'LL');
+
+  const isUptrend = structureLabel.includes('HH') && structureLabel.includes('HL');
+  const isDowntrend = structureLabel.includes('LH') && structureLabel.includes('LL');
+
+  const lastSwingHigh = swingHighs[swingHighs.length-1];
+  const lastSwingLow = swingLows[swingLows.length-1];
+  const close = bars[li].close;
+
+  let bos = null, choch = null;
+  if(isUptrend && lastSwingHigh && close > lastSwingHigh.price) bos = `BOS (bullish) — closed above swing high ₹${lastSwingHigh.price.toFixed(2)} from ${lastSwingHigh.date}`;
+  if(isUptrend && lastSwingLow && close < lastSwingLow.price) choch = `CHOCH (possible bearish reversal) — closed below swing low ₹${lastSwingLow.price.toFixed(2)} from ${lastSwingLow.date}`;
+  if(isDowntrend && lastSwingLow && close < lastSwingLow.price) bos = `BOS (bearish) — closed below swing low ₹${lastSwingLow.price.toFixed(2)} from ${lastSwingLow.date}`;
+  if(isDowntrend && lastSwingHigh && close > lastSwingHigh.price) choch = `CHOCH (possible bullish reversal) — closed above swing high ₹${lastSwingHigh.price.toFixed(2)} from ${lastSwingHigh.date}`;
+
+  // Equal highs / equal lows (liquidity pools) — last 3 of each, within 0.3% tolerance
+  const tol = 0.003;
+  const eqHighs = swingHighs.slice(-3);
+  const equalHighs = eqHighs.length>=2 && Math.abs(eqHighs[eqHighs.length-1].price - eqHighs[eqHighs.length-2].price) / eqHighs[eqHighs.length-2].price < tol;
+  const eqLows = swingLows.slice(-3);
+  const equalLows = eqLows.length>=2 && Math.abs(eqLows[eqLows.length-1].price - eqLows[eqLows.length-2].price) / eqLows[eqLows.length-2].price < tol;
+
+  const prevDay = bars[li-1];
+  const last5 = bars.slice(Math.max(0,li-5), li);
+  const prevWeekHigh = last5.length? Math.max(...last5.map(b=>b.high)) : null;
+  const prevWeekLow = last5.length? Math.min(...last5.map(b=>b.low)) : null;
+  const yr = bars.slice(Math.max(0,li-251), li+1);
+  const high52 = Math.max(...yr.map(b=>b.high));
+  const low52 = Math.min(...yr.map(b=>b.low));
+
+  panel.innerHTML = `
+    <div class="kv"><span>Structure</span><span>${structureLabel.join(' / ') || 'forming'} ${isUptrend?'(uptrend)':isDowntrend?'(downtrend)':''}</span></div>
+    ${bos ? `<div class="kv"><span style="color:#4ade80">BOS</span><span>${bos}</span></div>` : ''}
+    ${choch ? `<div class="kv"><span style="color:#f87171">CHOCH</span><span>${choch}</span></div>` : ''}
+    ${equalHighs ? `<div class="kv"><span>Equal highs</span><span>🟡 Detected near ₹${eqHighs[eqHighs.length-1].price.toFixed(2)} (liquidity pool)</span></div>` : ''}
+    ${equalLows ? `<div class="kv"><span>Equal lows</span><span>🟡 Detected near ₹${eqLows[eqLows.length-1].price.toFixed(2)} (liquidity pool)</span></div>` : ''}
+    <div class="kv"><span>Previous day H/L</span><span>₹${prevDay.high.toFixed(2)} / ₹${prevDay.low.toFixed(2)}</span></div>
+    <div class="kv"><span>Previous week H/L (approx)</span><span>${prevWeekHigh?`₹${prevWeekHigh.toFixed(2)} / ₹${prevWeekLow.toFixed(2)}`:'-'}</span></div>
+    <div class="kv"><span>52-week H/L (from loaded data)</span><span>₹${high52.toFixed(2)} / ₹${low52.toFixed(2)}</span></div>
+  `;
+}
+
+/* ============ LIQUIDITY MAP ============ */
+function renderLiquidityMap(bars, li){
+  const panel = document.getElementById('liquidityMap');
+  const window_ = bars.slice(Math.max(0,li-251), li+1);
+  const close = bars[li].close;
+  const high52 = Math.max(...window_.map(b=>b.high));
+  const low52 = Math.min(...window_.map(b=>b.low));
+  const {highs, lows} = swingLevels(bars);
+  const resistance = highs.filter(h=>h>close).sort((a,b)=>a-b)[0];
+  const support = lows.filter(l=>l<close).sort((a,b)=>b-a)[0];
+
+  // Volume profile: bucket the window's bars by price, sum volume per bucket, use it to size each level's bar.
+  const bins = 20;
+  const lo = low52, hi = high52, span = (hi-lo)||1;
+  const buckets = new Array(bins).fill(0);
+  window_.forEach(b=>{
+    const mid = (b.high+b.low)/2;
+    const idx = Math.min(bins-1, Math.max(0, Math.floor((mid-lo)/span*bins)));
+    buckets[idx] += b.volume;
+  });
+  const maxBucket = Math.max(...buckets, 1);
+  const volAt = (price) => {
+    const idx = Math.min(bins-1, Math.max(0, Math.floor((price-lo)/span*bins)));
+    return buckets[idx];
+  };
+  const barFor = (price) => {
+    if(price==null) return '';
+    const w = Math.max(1, Math.round(volAt(price)/maxBucket*20));
+    return '█'.repeat(w);
+  };
+
+  const levels = [
+    ['52W HIGH', high52],
+    ['Resistance', resistance],
+    ['CURRENT', close],
+    ['Support', support],
+    ['52W LOW', low52]
+  ];
+  panel.innerHTML = levels.map(([label,price])=>{
+    if(price==null) return `<div>${label.padEnd(11,' ')} —</div>`;
+    const marker = label==='CURRENT' ? ' ←' : '';
+    return `<div>${label.padEnd(11,' ')} ₹${price.toFixed(2).padStart(9,' ')}  <span style="color:#3b82f6">${barFor(price)}</span>${marker}</div>`;
+  }).join('');
+
+  // Sweep detection: today's high/low pierced a level then closed back inside it.
+  const sweeps = [];
+  if(bars[li].high > high52 && bars[li].close < high52) sweeps.push('Swept 52W high and closed back below it — possible liquidity grab.');
+  if(bars[li].low < low52 && bars[li].close > low52) sweeps.push('Swept 52W low and closed back above it — possible liquidity grab.');
+  if(resistance && bars[li].high > resistance && bars[li].close < resistance) sweeps.push(`Swept resistance ₹${resistance.toFixed(2)} and closed back below it.`);
+  if(support && bars[li].low < support && bars[li].close > support) sweeps.push(`Swept support ₹${support.toFixed(2)} and closed back above it.`);
+  if(sweeps.length) panel.innerHTML += `<div style="margin-top:8px;color:#fbbf24">${sweeps.join('<br>')}</div>`;
+}
+
+/* ============ REGIME DETECTOR ============ */
+function classifyRegime(bars, calc, i){
+  if(i<50 || calc.adx[i]==null || calc.ema50[i]==null) return null;
+  const trendUp = calc.ema20[i] > calc.ema50[i];
+  const trendDown = calc.ema20[i] < calc.ema50[i];
+  const adxHigh = calc.adx[i] > 25, adxLow = calc.adx[i] < 18;
+  const vol20 = calc.vol20[i];
+  const volX = vol20 ? bars[i].volume/vol20 : 1;
+
+  // volatility percentile vs its own trailing history
+  const atrPctSeries = [];
+  for(let j=Math.max(0,i-60); j<=i; j++){ if(calc.atr[j]!=null) atrPctSeries.push(calc.atr[j]/bars[j].close); }
+  atrPctSeries.sort((a,b)=>a-b);
+  const curAtrPct = calc.atr[i]/bars[i].close;
+  const atrRank = atrPctSeries.length ? atrPctSeries.indexOf(curAtrPct)/atrPctSeries.length : 0.5;
+
+  const prior20High = Math.max(...bars.slice(Math.max(0,i-20),i).map(b=>b.high));
+  const prior20Low = Math.min(...bars.slice(Math.max(0,i-20),i).map(b=>b.low));
+  const breakout = bars[i].close > prior20High && volX>1.3;
+  const breakdown = bars[i].close < prior20Low && volX>1.3;
+
+  const obvSlope = calc.obv[i]-calc.obv[Math.max(0,i-10)];
+  const rangeNarrow = adxLow;
+
+  if(breakout) return 'Breakout';
+  if(breakdown) return 'Breakdown';
+  if(adxHigh && trendUp) return 'Bull trend';
+  if(adxHigh && trendDown) return 'Bear trend';
+  if(rangeNarrow && obvSlope>0 && calc.cmf[i]>0) return 'Accumulation';
+  if(rangeNarrow && obvSlope<0 && calc.cmf[i]<0) return 'Distribution';
+  if(atrRank>0.8) return 'High-volatility';
+  if(atrRank<0.2) return 'Low-volatility';
+  return 'Range';
+}
+function renderRegimeHistory(bars, calc){
+  const cur = classifyRegime(bars, calc, bars.length-1);
+  const curEl = document.getElementById('regimeCurrent');
+  curEl.innerHTML = cur ? `<span class="tag ${cur.includes('Bull')||cur==='Breakout'||cur==='Accumulation'?'g':cur.includes('Bear')||cur==='Breakdown'||cur==='Distribution'?'r':'y'}" style="font-size:14px">Current regime: ${cur}</span>` : '<span class="muted">Not enough bars yet (need 50+).</span>';
+
+  const transitions = [];
+  let lastRegime = null;
+  for(let i=50;i<bars.length;i++){
+    const r = classifyRegime(bars, calc, i);
+    if(r && r!==lastRegime){ transitions.push({date: bars[i].date, regime: r}); lastRegime = r; }
+  }
+  const recent = transitions.slice(-15);
+  document.getElementById('regimeHistory').innerHTML = recent.length ? recent.map((t,idx)=>
+    `${t.date} ─── ${t.regime}${idx===recent.length-1?' (current)':''}`
+  ).join('<br>') : '<span class="muted">No regime changes detected yet in the loaded history.</span>';
+}
+
+/* ============ WHAT CHANGED TODAY (auto, no click needed) ============ */
+function renderWhatChangedToday(bars, calc, li, volX, nearestRes, nearestSup, breakout, breakdown){
+  const el = document.getElementById('whatChangedToday');
+  if(li<21){ el.innerHTML = '<div class="muted">Need a bit more history for this.</div>'; return; }
+  const items = [];
+  if(volX!=null && volX>2) items.push(['🔵', `Volume is ${volX.toFixed(1)}× the 20-day average.`]);
+  else if(volX!=null && volX>1.4) items.push(['🔵', `Volume expansion: ${volX.toFixed(1)}× the 20-day average.`]);
+  const dp = bars[li].delivPer, dpPrev = bars[li-1]?.delivPer;
+  if(dp!=null && dpPrev!=null && Math.abs(dp-dpPrev)>=8) items.push([dp>dpPrev?'🟢':'🔴', `Delivery ${dp>dpPrev?'increased':'decreased'} from ${dpPrev.toFixed(0)}% → ${dp.toFixed(0)}%.`]);
+  const range = bars[li].high-bars[li].low;
+  if(range>0 && (bars[li].close - bars[li].low)/range > 0.85) items.push(['🟢', "Closed near the day's high."]);
+  if(range>0 && (bars[li].high - bars[li].close)/range > 0.85) items.push(['🔴', "Closed near the day's low."]);
+  if(li>=25 && calc.cmf[li]!=null && calc.cmf[li-1]!=null && calc.cmf[li]>0 && calc.cmf[li-1]<=0) items.push(['🟢', 'CMF turned positive.']);
+  if(li>=25 && calc.cmf[li]!=null && calc.cmf[li-1]!=null && calc.cmf[li]<0 && calc.cmf[li-1]>=0) items.push(['🔴', 'CMF turned negative.']);
+  if(calc.rsi[li]!=null && calc.rsi[li-1]!=null){
+    if(calc.rsi[li-1]<60 && calc.rsi[li]>=60) items.push(['🟡', 'RSI crossed above 60.']);
+    if(calc.rsi[li-1]>40 && calc.rsi[li]<=40) items.push(['🟡', 'RSI crossed below 40.']);
+  }
+  if(calc.ema200[li]!=null) items.push([bars[li].close < calc.ema200[li] ? '🔴' : '🟢', `Price ${bars[li].close < calc.ema200[li] ? 'remains below' : 'remains above'} the 200-day EMA.`]);
+  if(breakout) items.push(['🟢', 'Breakout confirmed above recent range on volume.']);
+  if(breakdown) items.push(['🔴', 'Breakdown confirmed below recent range on volume.']);
+
+  el.innerHTML = items.length ? items.map(([icon,text])=>`<div style="margin-bottom:6px">${icon} ${text}</div>`).join('') : '<div class="muted">No unusual changes flagged for the latest session.</div>';
 }
 
 /* ============ WHY IS IT MOVING ============ */
