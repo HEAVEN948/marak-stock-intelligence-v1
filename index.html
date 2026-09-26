@@ -270,8 +270,9 @@
         <div class="settingsGrid">
           <input id="groqKey" placeholder="Groq API key (kept local, used client-side)">
           <select id="groqModel">
-            <option value="llama-3.3-70b-versatile">llama-3.3-70b-versatile</option>
-            <option value="llama-3.1-8b-instant">llama-3.1-8b-instant</option>
+            <option value="openai/gpt-oss-120b">openai/gpt-oss-120b (best quality)</option>
+            <option value="llama-3.1-8b-instant">llama-3.1-8b-instant (fastest)</option>
+            <option value="openai/gpt-oss-20b">openai/gpt-oss-20b</option>
           </select>
         </div>
         <div id="chat" style="margin-top:10px"></div>
@@ -953,6 +954,17 @@ Fundamentals (manual, may be blank): PE ${f.pe??'n/a'}, sector PE ${f.sectorpe??
 Upstox options/institutional module: ${upstox}
 Bars available: ${bars.length} (from ${bars[0].date} to ${bars[li].date})`;
 }
+/* ============ Persist Groq key/model locally so it isn't retyped every session ============ */
+(function(){
+  const keyEl = document.getElementById('groqKey'), modelEl = document.getElementById('groqModel');
+  const saved = JSON.parse(localStorage.getItem('msi_groq') || '{}');
+  if(saved.key) keyEl.value = saved.key;
+  if(saved.model && [...modelEl.options].some(o=>o.value===saved.model)) modelEl.value = saved.model;
+  function save(){ localStorage.setItem('msi_groq', JSON.stringify({key: keyEl.value.trim(), model: modelEl.value})); }
+  keyEl.addEventListener('change', save);
+  modelEl.addEventListener('change', save);
+})();
+
 let chatHistory = [];
 document.getElementById('chatSendBtn').addEventListener('click', sendChat);
 document.getElementById('chatInput').addEventListener('keydown', e=>{ if(e.key==='Enter') sendChat(); });
