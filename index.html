@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Marak Stock Intelligence</title>
+<link rel="manifest" href="manifest.json">
+<style>
+  :root{
+    --navy:#0b1e3a; --navy2:#132a4d; --blue:#2563eb; --blue2:#3b82f6;
+    --orange:#f97316; --green:#16a34a; --red:#dc2626; --amber:#d97706;
+    --bg:#0b1120; --card:#111a2e; --card2:#162138; --border:#22304d;
+    --text:#e6ecf5; --sub:#93a3bf;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif;}
+  h1,h2,h3,.brand{font-family:Poppins,Inter,sans-serif;}
+  header{display:flex;align-items:center;gap:10px;padding:14px 16px;background:linear-gradient(90deg,var(--navy),var(--navy2));position:sticky;top:0;z-index:10;border-bottom:1px solid var(--border)}
+  .logo{width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,var(--blue),var(--orange));display:flex;align-items:center;justify-content:center;font-weight:700}
+  .brand{font-weight:700;font-size:17px}
+  .brand small{display:block;font-size:10px;color:var(--sub);font-weight:400}
+  main{max-width:1100px;margin:0 auto;padding:14px}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px}
+  .card h3{margin:0 0 10px;font-size:14px;color:var(--sub);text-transform:uppercase;letter-spacing:.05em}
+  input,select,textarea,button{font-family:inherit;font-size:14px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text);padding:8px 10px}
+  button{cursor:pointer;background:var(--blue);border:none;color:#fff;font-weight:600}
+  button.secondary{background:var(--card2);border:1px solid var(--border);color:var(--text)}
+  button.ghost{background:transparent;border:1px solid var(--border);color:var(--sub)}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  @media(max-width:640px){.grid3{grid-template-columns:1fr 1fr}}
+  .tag{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:20px;font-size:12px;font-weight:600}
+  .tag.g{background:#0f2e1c;color:#4ade80}
+  .tag.y{background:#332705;color:#fbbf24}
+  .tag.r{background:#3a0e12;color:#f87171}
+  .tag.n{background:#1a2540;color:var(--sub)}
+  .bar{height:8px;border-radius:5px;background:var(--card2);overflow:hidden;flex:1}
+  .bar > div{height:100%;border-radius:5px}
+  .dnaRow{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:13px}
+  .dnaRow .label{width:100px;color:var(--sub)}
+  .dnaRow .val{width:34px;text-align:right;font-weight:600}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--border)}
+  th:first-child,td:first-child{text-align:left}
+  th{color:var(--sub);font-weight:600}
+  .tl{border-left:2px solid var(--border);margin-left:6px;padding-left:14px}
+  .tlItem{position:relative;padding-bottom:12px;font-size:13px}
+  .tlItem:before{content:'';position:absolute;left:-19px;top:4px;width:8px;height:8px;border-radius:50%;background:var(--blue)}
+  .tlTime{color:var(--sub);font-size:11px;display:block}
+  .muted{color:var(--sub);font-size:12.5px}
+  .statusline{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;padding:6px 0;border-bottom:1px dashed var(--border);font-size:13px}
+  .price{font-size:26px;font-weight:700}
+  .chg{font-size:14px;font-weight:600}
+  .up{color:#4ade80}.down{color:#f87171}
+  #chat{max-height:260px;overflow-y:auto;margin-bottom:8px}
+  .msg{padding:8px 10px;border-radius:8px;margin-bottom:6px;font-size:13.5px;white-space:pre-wrap}
+  .msg.user{background:var(--card2);margin-left:20%}
+  .msg.ai{background:#0e1a30;margin-right:5%;border:1px solid var(--border)}
+  .flexend{display:flex;gap:8px;justify-content:flex-end}
+  .tabbar{display:flex;gap:6px;margin-bottom:12px;overflow-x:auto}
+  .tabbtn{padding:8px 12px;border-radius:8px;background:var(--card2);border:1px solid var(--border);color:var(--sub);white-space:nowrap;font-weight:600;font-size:13px}
+  .tabbtn.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+  .tabpane{display:none}
+  .tabpane.active{display:block}
+  canvas{width:100%;height:220px;background:var(--card2);border-radius:8px}
+  .settingsGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .footNote{font-size:11.5px;color:var(--sub);margin-top:6px}
+  .kv{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px dashed var(--border)}
+  .kv span:last-child{font-weight:600}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Mi</div>
+  <div class="brand">Marak Stock Intelligence<small>Marak Innovation · offline-first</small></div>
+  <div style="margin-left:auto;display:flex;gap:8px">
+    <button class="ghost" id="shareBtn" style="padding:7px 10px;font-size:12px;display:none">Share</button>
+    <button class="secondary" id="installBtn" style="padding:7px 10px;font-size:12px;display:none">Install</button>
+  </div>
+</header>
+<div id="updateBanner" style="display:none;background:var(--orange);color:#1a1a1a;padding:8px 16px;text-align:center;font-size:13px;font-weight:600">
+  A new version is available. <button id="updateBtn" style="background:#1a1a1a;color:#fff;border:none;padding:4px 12px;border-radius:6px;margin-left:8px;font-weight:600">Reload to update</button>
+</div>
+
+<main>
+
+  <!-- DATA / SEARCH -->
+  <div class="card">
+    <h3>Load stock data</h3>
+    <div class="row">
+      <input type="file" id="csvFile" accept=".csv" multiple>
+      <select id="symbolSelect" style="min-width:160px"><option value="">Select loaded symbol...</option></select>
+      <button class="secondary" id="clearDataBtn">Clear all data</button>
+    </div>
+    <div class="footNote">Upload NSE Bhavcopy or any OHLCV CSV (Date, Open, High, Low, Close, Volume — headers auto-detected; DELIV_PER column used if present). You can upload several days' files at once — they merge per symbol.</div>
+    <div id="loadStatus" class="footNote"></div>
+  </div>
+
+  <div id="app" style="display:none">
+
+    <div class="card">
+      <div class="statusline" style="border:none;padding:0">
+        <div>
+          <div id="symTitle" style="font-weight:700;font-size:18px"></div>
+          <div class="price" id="symPrice"></div>
+          <div class="chg" id="symChg"></div>
+        </div>
+        <div style="text-align:right">
+          <div class="muted" id="symDate"></div>
+          <div class="muted" id="symBars"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tabbar">
+      <button class="tabbtn active" data-tab="structure">Structure</button>
+      <button class="tabbtn" data-tab="dna">Stock DNA</button>
+      <button class="tabbtn" data-tab="psych">Psychology</button>
+      <button class="tabbtn" data-tab="why">Why is it moving</button>
+      <button class="tabbtn" data-tab="pattern">Pattern history</button>
+      <button class="tabbtn" data-tab="options">Options / Institutional</button>
+      <button class="tabbtn" data-tab="fund">Fundamentals</button>
+      <button class="tabbtn" data-tab="ai">Ask AI</button>
+    </div>
+
+    <!-- STRUCTURE -->
+    <div class="tabpane active" id="tab-structure">
+      <div class="card">
+        <h3>Price & market structure</h3>
+        <canvas id="priceChart"></canvas>
+        <div class="grid3" style="margin-top:12px">
+          <div class="kv"><span>Trend regime</span><span id="s_trend">-</span></div>
+          <div class="kv"><span>ADX (14)</span><span id="s_adx">-</span></div>
+          <div class="kv"><span>ATR (14)</span><span id="s_atr">-</span></div>
+          <div class="kv"><span>ATR %</span><span id="s_atrp">-</span></div>
+          <div class="kv"><span>RSI (14)</span><span id="s_rsi">-</span></div>
+          <div class="kv"><span>VWAP (20d)</span><span id="s_vwap">-</span></div>
+          <div class="kv"><span>Volume vs 20d avg</span><span id="s_volx">-</span></div>
+          <div class="kv"><span>OBV slope (10d)</span><span id="s_obv">-</span></div>
+          <div class="kv"><span>CMF (20)</span><span id="s_cmf">-</span></div>
+          <div class="kv"><span>Nearest resistance</span><span id="s_res">-</span></div>
+          <div class="kv"><span>Nearest support</span><span id="s_sup">-</span></div>
+          <div class="kv"><span>Breakout/breakdown</span><span id="s_break">-</span></div>
+          <div class="kv"><span>Gap (last session)</span><span id="s_gap">-</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STOCK DNA -->
+    <div class="tabpane" id="tab-dna">
+      <div class="card">
+        <h3 id="dnaTitle">Stock DNA</h3>
+        <div id="dnaBars" style="font-family:'Courier New',monospace"></div>
+        <div class="footNote">Fundamental & Valuation bars use the numbers you enter in the Fundamentals tab. Leave blank to exclude them from scoring.</div>
+      </div>
+      <div class="card">
+        <h3>Rule-based read (not investment advice)</h3>
+        <div id="recoPanel"></div>
+        <div class="footNote">This is a mechanical weighted average of the DNA bars above — not a prediction, not personalized advice, and it knows nothing about your cost basis, risk tolerance, or portfolio. Treat it as a summary of what the computed technicals say, not an instruction.</div>
+      </div>
+    </div>
+
+    <!-- PSYCHOLOGY -->
+    <div class="tabpane" id="tab-psych">
+      <div class="card">
+        <h3>Market psychology</h3>
+        <div id="psychGrid"></div>
+        <div class="card" style="margin-top:10px;background:var(--card2)">
+          <div id="psychSummary" style="font-size:13.5px;line-height:1.5"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WHY IS IT MOVING -->
+    <div class="tabpane" id="tab-why">
+      <div class="card">
+        <h3>Why is it moving</h3>
+        <div class="row">
+          <select id="whyDateSelect"></select>
+          <button id="whyBtn">Investigate this session</button>
+        </div>
+        <div class="tl" id="whyTimeline" style="margin-top:14px"></div>
+        <div class="footNote">News, FII/DII and options triggers only appear if the Upstox module is connected (Options tab). Otherwise this is a price/volume/technical forensic trail only.</div>
+      </div>
+    </div>
+
+    <!-- PATTERN HISTORY -->
+    <div class="tabpane" id="tab-pattern">
+      <div class="card">
+        <h3>Historical pattern engine</h3>
+        <div class="row">
+          <label class="muted">Forward window (days) <input id="fwdDays" type="number" value="5" min="1" max="30" style="width:60px"></label>
+          <button id="patternBtn">Find similar historical setups</button>
+        </div>
+        <div id="patternResult" style="margin-top:12px"></div>
+        <div class="footNote">This is descriptive historical analysis of your own loaded data, not a prediction or guaranteed probability.</div>
+      </div>
+    </div>
+
+    <!-- OPTIONS / INSTITUTIONAL (UPSTOX) -->
+    <div class="tabpane" id="tab-options">
+      <div class="card">
+        <h3>Find instrument key</h3>
+        <div class="row">
+          <input id="instrLookupSymbol" placeholder="Trading symbol, e.g. JUBLFOOD" style="flex:1;min-width:160px">
+          <button id="instrLookupBtn">Search</button>
+        </div>
+        <div id="instrLookupStatus" class="footNote"></div>
+        <div id="instrLookupResults" style="margin-top:8px"></div>
+        <div class="footNote">Downloads Upstox's public NSE instrument file once per session (~60MB) and searches it locally — unreliable on mobile browsers (large file can freeze the tab). For known/common stocks, it's faster to just ask Claude for the ISIN and build the key yourself as <code>NSE_EQ|&lt;ISIN&gt;</code>.</div>
+        <div class="footNote">Available F&O expiries for a symbol: NSE publishes these; ask Claude if you're unsure of the exact date, or check the Upstox app's option chain screen for that stock.</div>
+      </div>
+      <div class="card">
+        <h3>Upstox connection</h3>
+        <div class="settingsGrid">
+          <input id="upstoxToken" placeholder="Upstox Access Token">
+          <input id="upstoxInstrumentKey" placeholder="Instrument key (e.g. NSE_EQ|INE002A01018)">
+        </div>
+        <div class="row" style="margin-top:8px">
+          <input id="upstoxExpiry" placeholder="Expiry date (YYYY-MM-DD)" style="width:180px">
+          <button id="upstoxFetchBtn">Fetch option chain</button>
+          <button class="secondary" id="upstoxSaveBtn">Save token</button>
+        </div>
+        <div id="expiryChips" style="margin-top:8px"></div>
+        <div class="footNote">You said you don't have Upstox API access yet — register at <b>upstox.com/developer</b>, create an app, complete OAuth login to get an access token (valid ~1 trading day), and find the instrument key for the stock in Upstox's published instrument master (NSE.json). This panel is fully wired once you paste a token.</div>
+        <div id="upstoxStatus" class="footNote"></div>
+      </div>
+      <div class="card">
+        <h3>Options snapshot</h3>
+        <div id="optionsGrid" class="grid3"></div>
+        <div id="optionsTableWrap" style="margin-top:10px;max-height:280px;overflow:auto"></div>
+      </div>
+      <div class="card">
+        <h3>FII / DII activity</h3>
+        <div class="muted">Upstox's API does not publish FII/DII net-flow figures directly. NSE publishes a daily FII/DII CSV separately — fetch is stubbed below via your existing CORS-proxy chain pattern; paste the NSE report URL for the day if the automatic pull is blocked.</div>
+        <div class="row" style="margin-top:8px">
+          <button class="secondary" id="fiiFetchBtn">Attempt NSE FII/DII fetch (experimental)</button>
+        </div>
+        <div id="fiiResult" style="margin-top:8px"></div>
+      </div>
+    </div>
+
+    <!-- FUNDAMENTALS -->
+    <div class="tabpane" id="tab-fund">
+      <div class="card">
+        <h3>Fundamentals (manual entry — no free live source)</h3>
+        <div class="grid3">
+          <label class="muted">PE<input id="f_pe" type="number" step="0.1"></label>
+          <label class="muted">Sector avg PE<input id="f_sectorpe" type="number" step="0.1"></label>
+          <label class="muted">EPS growth % (YoY)<input id="f_epsg" type="number" step="0.1"></label>
+          <label class="muted">Revenue growth % (YoY)<input id="f_revg" type="number" step="0.1"></label>
+          <label class="muted">ROE %<input id="f_roe" type="number" step="0.1"></label>
+          <label class="muted">ROCE %<input id="f_roce" type="number" step="0.1"></label>
+          <label class="muted">Debt/Equity<input id="f_de" type="number" step="0.01"></label>
+          <label class="muted">Operating margin %<input id="f_opm" type="number" step="0.1"></label>
+          <label class="muted">Promoter holding %<input id="f_promoter" type="number" step="0.1"></label>
+        </div>
+        <button id="fundSaveBtn" style="margin-top:10px">Save fundamentals</button>
+        <div class="footNote">Saved per symbol in your browser. Feeds the Fundamental/Valuation bars in Stock DNA. A results/annual-report parser isn't included — paste figures manually per quarter.</div>
+      </div>
+    </div>
+
+    <!-- AI ASSISTANT -->
+    <div class="tabpane" id="tab-ai">
+      <div class="card">
+        <h3>Ask AI about this stock</h3>
+        <div class="settingsGrid">
+          <input id="groqKey" placeholder="Groq API key (kept local, used client-side)">
+          <select id="groqModel">
+            <option value="llama-3.3-70b-versatile">llama-3.3-70b-versatile</option>
+            <option value="llama-3.1-8b-instant">llama-3.1-8b-instant</option>
+          </select>
+        </div>
+        <div id="chat" style="margin-top:10px"></div>
+        <div class="row">
+          <input id="chatInput" placeholder='e.g. "Are institutions accumulating?"' style="flex:1">
+          <button id="chatSendBtn">Ask</button>
+        </div>
+        <div class="footNote">The AI answers only from the computed structure/DNA/psychology/fundamentals/options data currently loaded for this stock — it does not browse the web or hallucinate outside prompts, but data gaps (no Upstox connection, no fundamentals entered) mean it will say so rather than invent numbers.</div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+/* ============ PWA: real service worker (proper auto-update), install prompt, share ============ */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').then((reg) => {
+    reg.addEventListener('updatefound', () => {
+      const newWorker = reg.installing;
+      newWorker.addEventListener('statechange', () => {
+        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+          // A new version has been installed and is waiting — show the update banner.
+          document.getElementById('updateBanner').style.display = 'block';
+        }
+      });
+    });
+  }).catch(()=>{ /* running from file:// or SW unsupported — app still works, just no offline caching/auto-update */ });
+
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshing) return; refreshing = true; window.location.reload();
+  });
+}
+document.getElementById('updateBtn')?.addEventListener('click', () => {
+  navigator.serviceWorker.getRegistration().then((reg) => {
+    if (reg && reg.waiting) reg.waiting.postMessage('SKIP_WAITING');
+    else window.location.reload();
+  });
+});
+
+// Install prompt (Android/Chrome). iOS Safari has no beforeinstallprompt — users add via Share > Add to Home Screen instead.
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  document.getElementById('installBtn').style.display = 'inline-block';
+});
+document.getElementById('installBtn').addEventListener('click', async () => {
+  if (!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+  document.getElementById('installBtn').style.display = 'none';
+});
+window.addEventListener('appinstalled', () => { document.getElementById('installBtn').style.display = 'none'; });
+
+// Share button
+if (navigator.share) {
+  const shareBtn = document.getElementById('shareBtn');
+  shareBtn.style.display = 'inline-block';
+  shareBtn.addEventListener('click', async () => {
+    let text = 'Marak Stock Intelligence — offline-first stock analysis PWA.';
+    if (currentSymbol && DB[currentSymbol]) {
+      const bars = DB[currentSymbol].bars; const last = bars[bars.length-1];
+      text = `${currentSymbol}: ₹${last.close} as of ${last.date} — via Marak Stock Intelligence.`;
+    }
+    try{ await navigator.share({ title: 'Marak Stock Intelligence', text, url: window.location.href }); }catch(e){ /* user cancelled share sheet */ }
+  });
+}
+
+/* ============ STATE ============ */
+let DB = JSON.parse(localStorage.getItem('msi_db') || '{}'); // { SYMBOL: { bars:[{date,open,high,low,close,volume,delivPer}], fundamentals:{}, upstox:{} } }
+let currentSymbol = null;
+
+function saveDB(){ localStorage.setItem('msi_db', JSON.stringify(DB)); }
+
+/* ============ CSV INGEST ============ */
+const HEADER_MAP = {
+  date:['date','timestamp','tradedate'], open:['open'], high:['high'], low:['low'],
+  close:['close','last','closepr'], volume:['volume','tottrdqty','vol','shtraded'],
+  symbol:['symbol','sym','ticker'], deliv:['deliv_per','delivpercentage','%dlyqttotrdqty']
+};
+function findCol(headers, keys){
+  const norm = headers.map(h=>h.trim().toLowerCase().replace(/[^a-z0-9%]/g,''));
+  for(const k of keys){ const i = norm.indexOf(k.replace(/[^a-z0-9%]/g,'')); if(i>=0) return i; }
+  // fuzzy contains
+  for(let i=0;i<norm.length;i++){ for(const k of keys){ if(norm[i].includes(k.replace(/[^a-z0-9%]/g,''))) return i; } }
+  return -1;
+}
+function splitCSVLine(line){
+  // Quote-aware split: commas inside quoted fields (e.g. Indian-style "9,45,073") are kept, not treated as delimiters.
+  const result = []; let cur = '', inQuotes = false;
+  for(let i=0;i<line.length;i++){
+    const c = line[i];
+    if(c === '"'){ inQuotes = !inQuotes; continue; }
+    if(c === ',' && !inQuotes){ result.push(cur); cur=''; } else { cur += c; }
+  }
+  result.push(cur);
+  return result;
+}
+function parseCSV(text){
+  text = text.replace(/^\uFEFF/,''); // strip BOM
+  const lines = text.split(/\r?\n/).filter(l=>l.trim().length);
+  if(!lines.length) return [];
+  const headers = splitCSVLine(lines[0]).map(h=>h.trim());
+  const col = {
+    date: findCol(headers, HEADER_MAP.date), open: findCol(headers, HEADER_MAP.open),
+    high: findCol(headers, HEADER_MAP.high), low: findCol(headers, HEADER_MAP.low),
+    close: findCol(headers, HEADER_MAP.close), volume: findCol(headers, HEADER_MAP.volume),
+    symbol: findCol(headers, HEADER_MAP.symbol), deliv: findCol(headers, HEADER_MAP.deliv)
+  };
+  if(col.date<0||col.close<0) return [];
+  const rows = [];
+  for(let i=1;i<lines.length;i++){
+    const cells = splitCSVLine(lines[i]).map(c=>c.trim());
+    if(cells.length<2) continue;
+    const num = v => { const n = parseFloat(String(v).replace(/,/g,'')); return isNaN(n)?null:n; };
+    const sym = col.symbol>=0 ? cells[col.symbol].toUpperCase() : null;
+    let d = cells[col.date];
+    // normalize date to YYYY-MM-DD
+    let dd = normalizeDate(d);
+    rows.push({
+      symbol: sym, date: dd,
+      open: num(cells[col.open]), high: num(cells[col.high]), low: num(cells[col.low]),
+      close: num(cells[col.close]), volume: num(cells[col.volume]) || 0,
+      delivPer: col.deliv>=0 ? num(cells[col.deliv]) : null
+    });
+  }
+  return rows.filter(r=>r.date && r.close!=null);
+}
+function normalizeDate(d){
+  if(!d) return null;
+  d = d.trim();
+  let m;
+  if(m = d.match(/^(\d{4})-(\d{2})-(\d{2})/)) return `${m[1]}-${m[2]}-${m[3]}`;
+  if(m = d.match(/^(\d{2})-([A-Za-z]{3})-(\d{4})/)){ // 01-Jan-2026
+    const months={Jan:'01',Feb:'02',Mar:'03',Apr:'04',May:'05',Jun:'06',Jul:'07',Aug:'08',Sep:'09',Oct:'10',Nov:'11',Dec:'12'};
+    return `${m[3]}-${months[m[2]]}-${m[1]}`;
+  }
+  if(m = d.match(/^(\d{2})[\/\-](\d{2})[\/\-](\d{4})/)) return `${m[3]}-${m[2]}-${m[1]}`;
+  return d;
+}
+
+document.getElementById('csvFile').addEventListener('change', async (e)=>{
+  const files = Array.from(e.target.files);
+  let totalRows = 0, symbolsTouched = new Set();
+  for(const file of files){
+    const text = await file.text();
+    const rows = parseCSV(text);
+    for(const r of rows){
+      const sym = r.symbol || file.name.replace(/\.csv$/i,'').toUpperCase();
+      if(!DB[sym]) DB[sym] = { bars:[], fundamentals:{}, upstox:{} };
+      // upsert by date
+      const idx = DB[sym].bars.findIndex(b=>b.date===r.date);
+      const bar = {date:r.date, open:r.open, high:r.high, low:r.low, close:r.close, volume:r.volume, delivPer:r.delivPer};
+      if(idx>=0) DB[sym].bars[idx]=bar; else DB[sym].bars.push(bar);
+      symbolsTouched.add(sym); totalRows++;
+    }
+  }
+  Object.keys(DB).forEach(s=> DB[s].bars.sort((a,b)=> a.date.localeCompare(b.date)) );
+  saveDB();
+  document.getElementById('loadStatus').textContent = `Loaded ${totalRows} rows across ${symbolsTouched.size} symbol(s).`;
+  refreshSymbolSelect();
+});
+
+document.getElementById('clearDataBtn').addEventListener('click', ()=>{
+  if(!confirm('Clear all locally stored stock data?')) return;
+  DB = {}; saveDB(); refreshSymbolSelect();
+  document.getElementById('app').style.display='none';
+});
+
+function refreshSymbolSelect(){
+  const sel = document.getElementById('symbolSelect');
+  sel.innerHTML = '<option value="">Select loaded symbol...</option>' +
+    Object.keys(DB).sort().map(s=>`<option value="${s}">${s} (${DB[s].bars.length} bars)</option>`).join('');
+}
+document.getElementById('symbolSelect').addEventListener('change', e=>{
+  if(e.target.value){ currentSymbol = e.target.value; loadSymbol(currentSymbol); }
+});
+refreshSymbolSelect();
+
+/* ============ INDICATOR ENGINE ============ */
+const IND = {
+  sma(arr,p){ return arr.map((_,i)=> i<p-1?null: arr.slice(i-p+1,i+1).reduce((a,b)=>a+b,0)/p ); },
+  ema(arr,p){ const k=2/(p+1); let out=[]; let prev=null;
+    arr.forEach((v,i)=>{ if(v==null){out.push(null);return;} if(prev==null){ if(i>=p-1){ const seed=arr.slice(i-p+1,i+1).reduce((a,b)=>a+b,0)/p; prev=seed; out.push(seed);} else out.push(null); } else { prev = v*k + prev*(1-k); out.push(prev);} });
+    return out; },
+  rsi(closes,p=14){ let gains=[],losses=[]; for(let i=1;i<closes.length;i++){ const ch=closes[i]-closes[i-1]; gains.push(Math.max(ch,0)); losses.push(Math.max(-ch,0)); }
+    let out=[null]; let avgG=null,avgL=null;
+    for(let i=0;i<gains.length;i++){ if(i<p-1){out.push(null);continue;} if(i===p-1){ avgG=gains.slice(0,p).reduce((a,b)=>a+b,0)/p; avgL=losses.slice(0,p).reduce((a,b)=>a+b,0)/p; } else { avgG=(avgG*(p-1)+gains[i])/p; avgL=(avgL*(p-1)+losses[i])/p; }
+      const rs = avgL===0? 100 : avgG/avgL; out.push(avgL===0?100:100-100/(1+rs)); }
+    return out; },
+  atr(bars,p=14){ let tr=[null]; for(let i=1;i<bars.length;i++){ const h=bars[i].high,l=bars[i].low,pc=bars[i-1].close;
+      tr.push(Math.max(h-l, Math.abs(h-pc), Math.abs(l-pc))); }
+    return IND.wilder(tr,p); },
+  wilder(arr,p){ let out=[]; let prev=null; for(let i=0;i<arr.length;i++){ if(arr[i]==null){out.push(null);continue;} if(prev==null){ if(i>=p){ const seed=arr.slice(i-p+1,i+1).filter(v=>v!=null).reduce((a,b)=>a+b,0)/p; prev=seed; out.push(seed);} else out.push(null);} else { prev=(prev*(p-1)+arr[i])/p; out.push(prev);} } return out; },
+  adx(bars,p=14){ let plusDM=[0],minusDM=[0],tr=[0];
+    for(let i=1;i<bars.length;i++){ const upMove=bars[i].high-bars[i-1].high, downMove=bars[i-1].low-bars[i].low;
+      plusDM.push(upMove>downMove&&upMove>0?upMove:0); minusDM.push(downMove>upMove&&downMove>0?downMove:0);
+      tr.push(Math.max(bars[i].high-bars[i].low, Math.abs(bars[i].high-bars[i-1].close), Math.abs(bars[i].low-bars[i-1].close))); }
+    const atr=IND.wilder(tr,p), pDM=IND.wilder(plusDM,p), mDM=IND.wilder(minusDM,p);
+    let plusDI=[],minusDI=[],dx=[];
+    for(let i=0;i<bars.length;i++){ if(atr[i]==null||!atr[i]){plusDI.push(null);minusDI.push(null);dx.push(null);continue;}
+      const pdi=100*pDM[i]/atr[i], mdi=100*mDM[i]/atr[i]; plusDI.push(pdi); minusDI.push(mdi);
+      dx.push(100*Math.abs(pdi-mdi)/((pdi+mdi)||1)); }
+    return { adx: IND.wilder(dx,p), plusDI, minusDI }; },
+  obv(bars){ let out=[0]; for(let i=1;i<bars.length;i++){ const ch=bars[i].close-bars[i-1].close;
+      out.push(out[i-1] + (ch>0?bars[i].volume:ch<0?-bars[i].volume:0)); } return out; },
+  cmf(bars,p=20){ let mfv=bars.map(b=>{ const range=(b.high-b.low)||1e-9; const mult=((b.close-b.low)-(b.high-b.close))/range; return mult*b.volume; });
+    let out=[]; for(let i=0;i<bars.length;i++){ if(i<p-1){out.push(null);continue;}
+      const sumMfv=mfv.slice(i-p+1,i+1).reduce((a,b)=>a+b,0), sumVol=bars.slice(i-p+1,i+1).reduce((a,b)=>a+b.volume,0);
+      out.push(sumVol? sumMfv/sumVol : 0);} return out; },
+  vwap(bars,p=20){ let out=[]; for(let i=0;i<bars.length;i++){ if(i<p-1){out.push(null);continue;}
+      let sumPV=0,sumV=0; for(let j=i-p+1;j<=i;j++){ const tp=(bars[j].high+bars[j].low+bars[j].close)/3; sumPV+=tp*bars[j].volume; sumV+=bars[j].volume; }
+      out.push(sumV? sumPV/sumV : null);} return out; }
+};
+
+function computeAll(bars){
+  const closes = bars.map(b=>b.close);
+  const ema20 = IND.ema(closes,20), ema50 = IND.ema(closes,50), ema200 = IND.ema(closes,200);
+  const rsi = IND.rsi(closes,14);
+  const atr = IND.atr(bars,14);
+  const { adx, plusDI, minusDI } = IND.adx(bars,14);
+  const obv = IND.obv(bars);
+  const cmf = IND.cmf(bars,20);
+  const vwap = IND.vwap(bars,20);
+  const vol20 = IND.sma(bars.map(b=>b.volume),20);
+  return {closes, ema20, ema50, ema200, rsi, atr, adx, plusDI, minusDI, obv, cmf, vwap, vol20};
+}
+
+function swingLevels(bars, lookback=60, strength=3){
+  const n = bars.length; const start = Math.max(0, n-lookback);
+  let highs=[], lows=[];
+  for(let i=start+strength;i<n-strength;i++){
+    const seg = bars.slice(i-strength,i+strength+1);
+    if(bars[i].high === Math.max(...seg.map(b=>b.high))) highs.push(bars[i].high);
+    if(bars[i].low === Math.min(...seg.map(b=>b.low))) lows.push(bars[i].low);
+  }
+  return {highs, lows};
+}
+
+/* ============ LOAD SYMBOL / RENDER ============ */
+function loadSymbol(sym){
+  const rec = DB[sym];
+  if(!rec || rec.bars.length<5){ alert('Not enough bars for this symbol (need at least 5).'); return; }
+  document.getElementById('app').style.display='block';
+  const bars = rec.bars;
+  const last = bars[bars.length-1], prev = bars[bars.length-2];
+  document.getElementById('symTitle').textContent = sym;
+  document.getElementById('symPrice').textContent = '₹' + last.close.toLocaleString('en-IN');
+  const chg = last.close-prev.close, chgP = (chg/prev.close*100);
+  const chgEl = document.getElementById('symChg');
+  chgEl.textContent = `${chg>=0?'+':''}${chg.toFixed(2)} (${chgP.toFixed(2)}%)`;
+  chgEl.className = 'chg ' + (chg>=0?'up':'down');
+  document.getElementById('symDate').textContent = last.date;
+  document.getElementById('symBars').textContent = bars.length + ' bars loaded';
+
+  const calc = computeAll(bars);
+  const {highs,lows} = swingLevels(bars);
+  const li = bars.length-1;
+
+  // STRUCTURE tab
+  const trendRegime = (()=>{
+    const e20=calc.ema20[li], e50=calc.ema50[li], e200=calc.ema200[li], adxV=calc.adx[li];
+    if(e50==null) return 'Insufficient data';
+    if(e200!=null && e20>e50 && e50>e200 && adxV>20) return '🟢 Bullish (trending)';
+    if(e200!=null && e20<e50 && e50<e200 && adxV>20) return '🔴 Bearish (trending)';
+    if(adxV!=null && adxV<18) return '🟡 Sideways / range-bound';
+    return e20>e50 ? '🟢 Bullish (mild)' : '🔴 Bearish (mild)';
+  })();
+  const volX = calc.vol20[li] ? (last.volume/calc.vol20[li]) : null;
+  const nearestRes = highs.filter(h=>h>last.close).sort((a,b)=>a-b)[0];
+  const nearestSup = lows.filter(l=>l<last.close).sort((a,b)=>b-a)[0];
+  const breakout = nearestRes==null || (bars.length>20 && last.close > Math.max(...bars.slice(-21,-1).map(b=>b.high)) && volX>1.3);
+  const breakdown = bars.length>20 && last.close < Math.min(...bars.slice(-21,-1).map(b=>b.low)) && volX>1.3;
+  const gap = prev ? ((last.open-prev.close)/prev.close*100) : null;
+
+  setText('s_trend', trendRegime);
+  setText('s_adx', fmt(calc.adx[li]));
+  setText('s_atr', fmt(calc.atr[li]));
+  setText('s_atrp', calc.atr[li]!=null ? (calc.atr[li]/last.close*100).toFixed(2)+'%' : '-');
+  setText('s_rsi', fmt(calc.rsi[li]));
+  setText('s_vwap', calc.vwap[li]!=null ? '₹'+calc.vwap[li].toFixed(2) : '-');
+  setText('s_volx', volX!=null ? volX.toFixed(2)+'x' : '-');
+  setText('s_obv', obvSlopeLabel(calc.obv));
+  setText('s_cmf', fmt(calc.cmf[li],3));
+  setText('s_res', nearestRes ? '₹'+nearestRes.toFixed(2) : '-');
+  setText('s_sup', nearestSup ? '₹'+nearestSup.toFixed(2) : '-');
+  setText('s_break', breakout ? '🟢 Breakout' : breakdown ? '🔴 Breakdown' : '— none');
+  setText('s_gap', gap!=null ? `${gap>=0?'Gap up':'Gap down'} ${Math.abs(gap).toFixed(2)}%` : '-');
+
+  drawChart(bars.slice(-90));
+
+  // STOCK DNA
+  renderDNA(sym, bars, calc, li, volX, gap);
+
+  // PSYCHOLOGY
+  renderPsychology(bars, calc, li, volX, trendRegime);
+
+  // WHY tab date list
+  const whySel = document.getElementById('whyDateSelect');
+  whySel.innerHTML = bars.slice(-60).reverse().map(b=>`<option value="${b.date}">${b.date}</option>`).join('');
+
+  // fundamentals prefill
+  const f = rec.fundamentals||{};
+  ['pe','sectorpe','epsg','revg','roe','roce','de','opm','promoter'].forEach(k=>{
+    const el = document.getElementById('f_'+k); if(el) el.value = f[k] ?? '';
+  });
+
+  currentSymbol = sym;
+}
+function setText(id,v){ document.getElementById(id).textContent = v; }
+function fmt(v,dp=2){ return v==null||isNaN(v) ? '-' : v.toFixed(dp); }
+function obvSlopeLabel(obv){
+  const n=obv.length; if(n<11) return '-';
+  const slope = obv[n-1]-obv[n-11];
+  return slope>0 ? '🟢 Rising' : slope<0 ? '🔴 Falling' : '🟡 Flat';
+}
+
+/* ============ CHART (simple canvas candlesticks) ============ */
+function drawChart(bars){
+  const canvas = document.getElementById('priceChart');
+  const dpr = window.devicePixelRatio||1;
+  const w = canvas.clientWidth, h = 220;
+  canvas.width = w*dpr; canvas.height = h*dpr;
+  const ctx = canvas.getContext('2d'); ctx.scale(dpr,dpr);
+  ctx.clearRect(0,0,w,h);
+  if(!bars.length) return;
+  const max = Math.max(...bars.map(b=>b.high)), min = Math.min(...bars.map(b=>b.low));
+  const pad = (max-min)*0.08 || 1;
+  const yScale = v => h - ((v-(min-pad))/((max+pad)-(min-pad))) * h;
+  const cw = w/bars.length;
+  bars.forEach((b,i)=>{
+    const x = i*cw + cw/2;
+    const up = b.close>=b.open;
+    ctx.strokeStyle = ctx.fillStyle = up ? '#4ade80' : '#f87171';
+    ctx.beginPath(); ctx.moveTo(x, yScale(b.high)); ctx.lineTo(x, yScale(b.low)); ctx.stroke();
+    const bodyTop = yScale(Math.max(b.open,b.close)), bodyBot = yScale(Math.min(b.open,b.close));
+    ctx.fillRect(x-cw*0.35, bodyTop, cw*0.7, Math.max(1,bodyBot-bodyTop));
+  });
+}
+
+/* ============ STOCK DNA ============ */
+function renderDNA(sym, bars, calc, li, volX, gap){
+  document.getElementById('dnaTitle').textContent = sym + ' — Stock DNA';
+  const rec = DB[sym]; const f = rec.fundamentals || {};
+  const clamp = v => Math.max(0,Math.min(100,v));
+  const trendScore = clamp(50 + (calc.ema20[li]>calc.ema50[li]?20:-20) + (calc.adx[li]!=null?Math.min(30,calc.adx[li]):0));
+  const momentumScore = clamp(calc.rsi[li]!=null ? calc.rsi[li] : 50);
+  const volumeScore = clamp(volX!=null ? 50+Math.min(50,(volX-1)*50) : 50);
+  const obvSlope = calc.obv[calc.obv.length-1]-calc.obv[Math.max(0,calc.obv.length-11)];
+  const accumScore = clamp(50 + (obvSlope>0?20:-20) + (calc.cmf[li]!=null? calc.cmf[li]*200 : 0));
+  const fundamentalScore = (f.epsg!=null||f.revg!=null||f.roe!=null) ? clamp(50 + (parseFloat(f.epsg)||0)*1.5 + (parseFloat(f.roe)||0)) : null;
+  const valuationScore = (f.pe!=null && f.sectorpe) ? clamp(100 - (parseFloat(f.pe)/parseFloat(f.sectorpe))*50) : null;
+  const atrp = calc.atr[li]!=null ? calc.atr[li]/bars[li].close*100 : null;
+  const riskScore = atrp!=null ? clamp(100 - atrp*10) : null;
+
+  const rows = [
+    ['TREND', trendScore, 0.20], ['MOMENTUM', momentumScore, 0.15], ['VOLUME', volumeScore, 0.10],
+    ['ACCUMULATION', accumScore, 0.15], ['FUNDAMENTAL', fundamentalScore, 0.15], ['VALUATION', valuationScore, 0.10],
+    ['RISK', riskScore, 0.15]
+  ];
+  // ASCII block-bar rendering, matching the original spec's look, e.g. "TREND ████████░░ 82"
+  document.getElementById('dnaBars').innerHTML = rows.map(([label,val])=>{
+    const padLabel = label.padEnd(13,' ');
+    if(val==null) return `<div class="dnaRow"><span style="white-space:pre">${padLabel}</span><span class="muted">░░░░░░░░░░  n/a</span></div>`;
+    const filled = Math.round(val/10);
+    const bar = '█'.repeat(filled) + '░'.repeat(10-filled);
+    const color = val>=66?'#4ade80':val>=40?'#fbbf24':'#f87171';
+    return `<div class="dnaRow"><span style="white-space:pre">${padLabel}</span><span style="color:${color};letter-spacing:-1px">${bar}</span><span style="margin-left:8px">${Math.round(val)}</span></div>`;
+  }).join('');
+
+  renderRecommendation(rows);
+}
+
+/* ============ RULE-BASED READ (weighted composite of DNA scores — not advice, just arithmetic) ============ */
+function renderRecommendation(rows){
+  const scored = rows.filter(([,val]) => val != null);
+  const totalWeight = scored.reduce((s,[,,w]) => s+w, 0);
+  const composite = totalWeight ? scored.reduce((s,[,val,w]) => s+val*w, 0) / totalWeight : null;
+  const missing = rows.filter(([,val]) => val == null).map(([label]) => label);
+  const panel = document.getElementById('recoPanel');
+  if(composite == null){ panel.innerHTML = '<div class="muted">Not enough data to compute a read yet.</div>'; return; }
+
+  let band, cls;
+  if(composite >= 65){ band = 'Bullish read'; cls = 'g'; }
+  else if(composite >= 55){ band = 'Mildly bullish'; cls = 'g'; }
+  else if(composite > 45){ band = 'Neutral / mixed'; cls = 'y'; }
+  else if(composite > 35){ band = 'Mildly bearish'; cls = 'r'; }
+  else { band = 'Bearish read'; cls = 'r'; }
+
+  const sortedFactors = scored.slice().sort((a,b) => b[1]-a[1]);
+  const strongest = sortedFactors[0], weakest = sortedFactors[sortedFactors.length-1];
+
+  panel.innerHTML = `
+    <div class="statusline"><span style="font-size:15px;font-weight:700">Composite score</span><span class="tag ${cls}" style="font-size:14px">${band} — ${Math.round(composite)}/100</span></div>
+    <div class="kv"><span>Strongest factor</span><span>${strongest[0]} (${Math.round(strongest[1])})</span></div>
+    <div class="kv"><span>Weakest factor</span><span>${weakest[0]} (${Math.round(weakest[1])})</span></div>
+    ${missing.length ? `<div class="kv"><span>Excluded (no data)</span><span>${missing.join(', ')}</span></div>` : ''}
+  `;
+}
+
+/* ============ PSYCHOLOGY GRID ============ */
+function renderPsychology(bars, calc, li, volX, trendRegime){
+  const upstoxConnected = !!DB[currentSymbol]?.upstox?.token;
+  const items = [
+    ['Trend', trendRegime.includes('Bullish')?'g':trendRegime.includes('Bearish')?'r':'y', trendRegime.replace(/🟢|🔴|🟡/g,'').trim()],
+    ['Volume', volX>1.2?'g':volX<0.8?'r':'y', volX!=null? (volX*100).toFixed(0)+'% of 20d avg' : 'n/a'],
+    ['Delivery', bars[li].delivPer!=null ? (bars[li].delivPer>60?'g':bars[li].delivPer<30?'r':'y') : 'n', bars[li].delivPer!=null? bars[li].delivPer+'%' : 'no DELIV_PER column'],
+    ['Momentum', calc.rsi[li]>55?'g':calc.rsi[li]<45?'r':'y', 'RSI '+fmt(calc.rsi[li])],
+    ['Institutional Flow', 'n', upstoxConnected? 'from Upstox OI' : 'connect Upstox'],
+    ['Valuation', 'n', 'enter fundamentals'],
+    ['Options Position', 'n', upstoxConnected? 'from Upstox OI' : 'connect Upstox'],
+    ['News Sentiment', 'n', 'no news source connected']
+  ];
+  document.getElementById('psychGrid').innerHTML = items.map(([label,cls,val])=>
+    `<div class="statusline"><span>${label}</span><span class="tag ${cls}">${val}</span></div>`).join('');
+  const summary = `Price is showing a ${trendRegime.replace(/🟢|🔴|🟡/g,'').trim().toLowerCase()} structure with ${volX>1.2?'increasing':'unremarkable'} participation. Momentum is ${calc.rsi[li]>55?'positive':calc.rsi[li]<45?'weak':'neutral'}. Institutional flow, options positioning and news sentiment need the Upstox connection (and a news source) to populate — currently ${upstoxConnected?'connected':'not connected'}.`;
+  document.getElementById('psychSummary').textContent = summary;
+}
+
+/* ============ WHY IS IT MOVING ============ */
+document.getElementById('whyBtn').addEventListener('click', ()=>{
+  const date = document.getElementById('whyDateSelect').value;
+  const bars = DB[currentSymbol].bars;
+  const i = bars.findIndex(b=>b.date===date);
+  if(i<1){ document.getElementById('whyTimeline').innerHTML = '<div class="muted">Not enough prior data for this date.</div>'; return; }
+  const b = bars[i], pb = bars[i-1];
+  const calc = computeAll(bars.slice(0,i+1));
+  const li = i;
+  const vol20 = IND.sma(bars.slice(0,i+1).map(x=>x.volume),20)[li];
+  const chgP = (b.close-pb.close)/pb.close*100;
+  const gapP = (b.open-pb.close)/pb.close*100;
+  const volX = vol20? b.volume/vol20 : null;
+  const events = [];
+  events.push([b.date+' open', `Opened ${gapP>=0?'up':'down'} ${Math.abs(gapP).toFixed(2)}% from prior close.`]);
+  if(volX && volX>1.3) events.push(['Session', `Volume expansion: ${(volX*100).toFixed(0)}% of 20-day average.`]);
+  if(Math.abs(chgP)>2) events.push(['Session', `Large move: ${chgP>=0?'+':''}${chgP.toFixed(2)}% close-to-close.`]);
+  const range = b.high-b.low, body = Math.abs(b.close-b.open);
+  if(range>0 && body/range < 0.35) events.push(['Session', 'Long wick relative to body — signs of intrasession rejection/absorption.']);
+  const obvNow = calc.obv[li], obvPrev = calc.obv[li-1];
+  if(obvNow!=null && obvPrev!=null) events.push(['Session', `OBV ${obvNow>obvPrev?'rose':'fell'}, ${obvNow>obvPrev?'consistent with':'diverging from'} the price move.`]);
+  events.push(['Data gap', 'Options OI change, FII/DII flow, news and filings for this date require the Upstox module and a news source — not available offline.']);
+  events.push([b.date+' close', `Closed at ₹${b.close.toFixed(2)} (${chgP>=0?'+':''}${chgP.toFixed(2)}%).`]);
+  document.getElementById('whyTimeline').innerHTML = events.map(([t,d])=>
+    `<div class="tlItem"><span class="tlTime">${t}</span>${d}</div>`).join('');
+});
+
+/* ============ HISTORICAL PATTERN ENGINE ============ */
+document.getElementById('patternBtn').addEventListener('click', ()=>{
+  const bars = DB[currentSymbol].bars;
+  const fwd = parseInt(document.getElementById('fwdDays').value)||5;
+  const calc = computeAll(bars);
+  const li = bars.length-1;
+  const curRSI = calc.rsi[li], curADX = calc.adx[li];
+  const vol20 = calc.vol20[li];
+  const curVolX = vol20 ? bars[li].volume/vol20 : null;
+  if(curRSI==null || curADX==null){ document.getElementById('patternResult').innerHTML='<div class="muted">Not enough data yet (need 20+ bars).</div>'; return; }
+  const bucket = v => v==null?null:Math.round(v/10)*10;
+  const rsiB = bucket(curRSI), adxB = bucket(curADX);
+  let matches = [];
+  for(let i=20;i<bars.length-fwd-1;i++){
+    const r = calc.rsi[i], a = calc.adx[i], vx = calc.vol20[i]? bars[i].volume/calc.vol20[i] : null;
+    if(r==null||a==null) continue;
+    if(bucket(r)===rsiB && bucket(a)===adxB && vx!=null && curVolX!=null && Math.abs(vx-curVolX)<0.5){
+      const fwdRet = (bars[i+fwd].close - bars[i].close)/bars[i].close*100;
+      matches.push({date:bars[i].date, fwdRet});
+    }
+  }
+  if(!matches.length){ document.getElementById('patternResult').innerHTML = '<div class="muted">No comparable historical setups found in the loaded data.</div>'; return; }
+  const pos = matches.filter(m=>m.fwdRet>0).length, neg = matches.length-pos;
+  const median = matches.map(m=>m.fwdRet).sort((a,b)=>a-b)[Math.floor(matches.length/2)];
+  document.getElementById('patternResult').innerHTML = `
+    <div class="kv"><span>Similar historical setups found</span><span>${matches.length}</span></div>
+    <div class="kv"><span>Positive after ${fwd}d</span><span>${pos}</span></div>
+    <div class="kv"><span>Negative after ${fwd}d</span><span>${neg}</span></div>
+    <div class="kv"><span>Median forward move</span><span>${median>=0?'+':''}${median.toFixed(2)}%</span></div>
+    <div class="footNote">Setup match: RSI ≈ ${curRSI.toFixed(0)}, ADX ≈ ${curADX.toFixed(0)}, volume ≈ ${curVolX?.toFixed(2)}x 20d avg. Historical analysis only — not a prediction.</div>
+  `;
+});
+
+/* ============ UPSTOX (OPTIONS / OI / PCR / MAX PAIN) ============ */
+const PROXIES = [
+  u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+  u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+  u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+];
+async function proxyFetch(url, opts={}, timeoutMs=10000){
+  for(const build of PROXIES){
+    try{
+      const ctrl = new AbortController(); const t = setTimeout(()=>ctrl.abort(), timeoutMs);
+      const res = await fetch(build(url), {...opts, signal: ctrl.signal});
+      clearTimeout(t);
+      if(res.ok) return res;
+    }catch(e){ /* try next proxy */ }
+  }
+  throw new Error('All proxies failed');
+}
+
+/* ============ INSTRUMENT KEY LOOKUP (Upstox public NSE.json.gz) ============ */
+let instrumentCache = null; // { eq: [...], fo: [...] } parsed once per session, not persisted (too large for localStorage)
+
+async function fetchInstrumentMaster(){
+  const url = 'https://assets.upstox.com/market-quote/instruments/exchange/NSE.json.gz';
+  let res;
+  try{
+    const ctrl = new AbortController(); const t = setTimeout(()=>ctrl.abort(), 12000);
+    res = await fetch(url, {signal: ctrl.signal}); clearTimeout(t);
+    if(!res.ok) throw new Error('direct fetch failed: '+res.status);
+  }
+  catch(e){ res = await proxyFetch(url, {}, 30000); }
+  // The file is gzip-compressed; if the server didn't set Content-Encoding, the browser won't auto-decompress,
+  // so decompress manually via the native DecompressionStream API.
+  let text;
+  try{
+    const ds = new DecompressionStream('gzip');
+    const decompressed = res.body.pipeThrough(ds);
+    text = await new Response(decompressed).text();
+  }catch(e){
+    // Either already decompressed by the browser/proxy, or DecompressionStream unsupported — fall back to raw text.
+    text = await res.text();
+  }
+  const arr = JSON.parse(text);
+  const eq = arr.filter(i => i.segment==='NSE_EQ');
+  const fo = arr.filter(i => i.segment==='NSE_FO');
+  return { eq, fo };
+}
+
+document.getElementById('instrLookupBtn').addEventListener('click', async ()=>{
+  const q = document.getElementById('instrLookupSymbol').value.trim().toUpperCase();
+  const statusEl = document.getElementById('instrLookupStatus');
+  const resultsEl = document.getElementById('instrLookupResults');
+  if(!q){ statusEl.textContent = 'Enter a trading symbol or partial name to search.'; return; }
+  if(!instrumentCache){
+    statusEl.textContent = 'Downloading instrument master (large file, first search only)...';
+    try{ instrumentCache = await fetchInstrumentMaster(); }
+    catch(e){ statusEl.textContent = 'Download failed: ' + e.message + '. Try again on Wi-Fi, or paste the instrument key manually if you already know it.'; return; }
+  }
+  const matches = instrumentCache.eq.filter(i =>
+    (i.trading_symbol && i.trading_symbol.toUpperCase().includes(q)) ||
+    (i.name && i.name.toUpperCase().includes(q))
+  ).slice(0,15);
+  statusEl.textContent = matches.length ? `${matches.length} match(es):` : 'No matches found — try a shorter fragment.';
+  resultsEl.innerHTML = matches.map(m => `
+    <div class="statusline">
+      <span>${m.trading_symbol} — ${m.name}</span>
+      <button class="secondary pickInstr" data-key="${m.instrument_key}" data-symbol="${m.trading_symbol}" style="padding:4px 10px;font-size:12px">Use this</button>
+    </div>`).join('');
+  document.querySelectorAll('.pickInstr').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.getElementById('upstoxInstrumentKey').value = btn.dataset.key;
+      statusEl.textContent = `Selected ${btn.dataset.symbol}. Now finding available expiries...`;
+      const underlying = btn.dataset.symbol;
+      const expiries = [...new Set(instrumentCache.fo
+        .filter(f => f.underlying_symbol === underlying && f.instrument_type && f.instrument_type.startsWith('OPT'))
+        .map(f => new Date(f.expiry).toISOString().slice(0,10))
+      )].sort();
+      const chipsEl = document.getElementById('expiryChips');
+      if(expiries.length){
+        chipsEl.innerHTML = 'Available expiries: ' + expiries.map(d=>`<button class="ghost expiryChip" data-d="${d}" style="padding:4px 10px;font-size:12px;margin:2px">${d}</button>`).join('');
+        document.querySelectorAll('.expiryChip').forEach(c=> c.addEventListener('click', ()=>{ document.getElementById('upstoxExpiry').value = c.dataset.d; }));
+      } else {
+        chipsEl.innerHTML = '<span class="muted">No F&O expiries found for this symbol — it may not trade in derivatives.</span>';
+      }
+    });
+  });
+});
+
+document.getElementById('upstoxSaveBtn').addEventListener('click', ()=>{
+  if(!currentSymbol) return;
+  DB[currentSymbol].upstox.token = document.getElementById('upstoxToken').value.trim();
+  saveDB();
+  document.getElementById('upstoxStatus').textContent = 'Token saved locally for ' + currentSymbol + '.';
+});
+
+document.getElementById('upstoxFetchBtn').addEventListener('click', async ()=>{
+  const token = document.getElementById('upstoxToken').value.trim();
+  const instrumentKey = document.getElementById('upstoxInstrumentKey').value.trim();
+  const expiry = document.getElementById('upstoxExpiry').value.trim();
+  const statusEl = document.getElementById('upstoxStatus');
+  if(!token || !instrumentKey || !expiry){ statusEl.textContent = 'Enter access token, instrument key and expiry date first.'; return; }
+  statusEl.textContent = 'Fetching option chain from Upstox...';
+  try{
+    // Upstox v2 option chain endpoint — direct call (Upstox allows browser CORS on some routes; falls back to proxy chain otherwise)
+    const url = `https://api.upstox.com/v2/option/chain?instrument_key=${encodeURIComponent(instrumentKey)}&expiry_date=${expiry}`;
+    let res;
+    try{
+      res = await fetch(url, { headers: { 'Accept':'application/json', 'Authorization':'Bearer '+token } });
+      if(!res.ok) throw new Error('direct call failed: '+res.status);
+    }catch(e){
+      res = await proxyFetch(url, { headers: { 'Accept':'application/json', 'Authorization':'Bearer '+token } });
+    }
+    const data = await res.json();
+    renderOptionChain(data.data || []);
+    statusEl.textContent = 'Option chain loaded.';
+    if(currentSymbol){ DB[currentSymbol].upstox = {token, instrumentKey, expiry, fetchedAt: Date.now()}; saveDB(); }
+  }catch(err){
+    statusEl.textContent = 'Fetch failed: ' + err.message + '. Upstox tokens expire daily and instrument keys must match their instrument master exactly — check both.';
+  }
+});
+
+function renderOptionChain(chain){
+  if(!chain.length){ document.getElementById('optionsTableWrap').innerHTML = '<div class="muted">No option chain data returned.</div>'; return; }
+  let callOI=0, putOI=0;
+  const rows = chain.map(row=>{
+    const call = row.call_options?.market_data || {}; const put = row.put_options?.market_data || {};
+    callOI += call.oi||0; putOI += put.oi||0;
+    return {strike: row.strike_price, callOI: call.oi, callChgOI: (call.oi!=null&&call.prev_oi!=null)? call.oi-call.prev_oi : null, callIV: row.call_options?.option_greeks?.iv,
+             putOI: put.oi, putChgOI: (put.oi!=null&&put.prev_oi!=null)? put.oi-put.prev_oi : null, putIV: row.put_options?.option_greeks?.iv};
+  });
+  const pcr = putOI && callOI ? (putOI/callOI) : null;
+  // max pain: strike minimizing total ITM value paid to option holders
+  let maxPain=null, minLoss=Infinity;
+  rows.forEach(r=>{
+    let loss=0;
+    rows.forEach(o=>{
+      if(o.strike < r.strike) loss += (r.strike-o.strike) * (o.callOI||0);
+      if(o.strike > r.strike) loss += (o.strike-r.strike) * (o.putOI||0);
+    });
+    if(loss<minLoss){ minLoss=loss; maxPain=r.strike; }
+  });
+  document.getElementById('optionsGrid').innerHTML = `
+    <div class="kv"><span>Total Call OI</span><span>${callOI.toLocaleString('en-IN')}</span></div>
+    <div class="kv"><span>Total Put OI</span><span>${putOI.toLocaleString('en-IN')}</span></div>
+    <div class="kv"><span>PCR</span><span>${pcr?pcr.toFixed(2):'-'}</span></div>
+    <div class="kv"><span>Max pain strike</span><span>${maxPain??'-'}</span></div>
+    <div class="kv"><span>Bias (by PCR)</span><span>${pcr==null?'-':pcr>1.2?'🟢 Put-heavy (bullish bias)':pcr<0.8?'🔴 Call-heavy (bearish bias)':'🟡 Balanced'}</span></div>
+  `;
+  document.getElementById('optionsTableWrap').innerHTML = `<table>
+    <thead><tr><th>Strike</th><th>Call OI</th><th>ΔOI</th><th>IV</th><th>Put OI</th><th>ΔOI</th><th>IV</th></tr></thead>
+    <tbody>${rows.map(r=>`<tr><td>${r.strike}</td><td>${r.callOI??'-'}</td><td>${r.callChgOI!=null?(r.callChgOI>=0?'+':'')+r.callChgOI:'-'}</td><td>${r.callIV?r.callIV.toFixed(2):'-'}</td><td>${r.putOI??'-'}</td><td>${r.putChgOI!=null?(r.putChgOI>=0?'+':'')+r.putChgOI:'-'}</td><td>${r.putIV?r.putIV.toFixed(2):'-'}</td></tr>`).join('')}</tbody>
+  </table>`;
+}
+
+document.getElementById('fiiFetchBtn').addEventListener('click', async ()=>{
+  const el = document.getElementById('fiiResult');
+  el.innerHTML = '<div class="muted">Attempting NSE FII/DII report fetch via proxy chain...</div>';
+  try{
+    // NSE publishes this at a session-cookie-gated endpoint; a direct proxy pull often gets blocked. Best-effort only.
+    const url = 'https://www.nseindia.com/api/fiidiiTradeReact';
+    const res = await proxyFetch(url, { headers: {'Accept':'application/json'} });
+    const data = await res.json();
+    el.innerHTML = '<table><thead><tr><th>Category</th><th>Date</th><th>Buy</th><th>Sell</th><th>Net</th></tr></thead><tbody>' +
+      data.map(d=>`<tr><td>${d.category}</td><td>${d.date}</td><td>${d.buyValue}</td><td>${d.sellValue}</td><td>${d.netValue}</td></tr>`).join('') +
+      '</tbody></table>';
+  }catch(e){
+    el.innerHTML = `<div class="muted">Automatic fetch was blocked (expected — NSE requires a browser session/cookie handshake this proxy chain can't complete). Download the FII/DII CSV manually from nseindia.com and I can add a CSV-import path for it, same pattern as the Bhavcopy uploader.</div>`;
+  }
+});
+
+/* ============ FUNDAMENTALS SAVE ============ */
+document.getElementById('fundSaveBtn').addEventListener('click', ()=>{
+  if(!currentSymbol) return;
+  const f = {};
+  ['pe','sectorpe','epsg','revg','roe','roce','de','opm','promoter'].forEach(k=>{
+    const v = document.getElementById('f_'+k).value;
+    f[k] = v===''? null : parseFloat(v);
+  });
+  DB[currentSymbol].fundamentals = f;
+  saveDB();
+  loadSymbol(currentSymbol); // refresh DNA bars
+  alert('Fundamentals saved for ' + currentSymbol);
+});
+
+/* ============ AI ASSISTANT (Groq) ============ */
+function buildContext(){
+  const rec = DB[currentSymbol]; const bars = rec.bars; const li = bars.length-1;
+  const calc = computeAll(bars);
+  const f = rec.fundamentals||{};
+  const upstox = rec.upstox?.token ? 'connected' : 'not connected';
+  return `Stock: ${currentSymbol}
+Last close: ${bars[li].close} on ${bars[li].date}
+RSI(14): ${fmt(calc.rsi[li])}, ADX(14): ${fmt(calc.adx[li])}, ATR(14): ${fmt(calc.atr[li])}
+EMA20: ${fmt(calc.ema20[li])}, EMA50: ${fmt(calc.ema50[li])}, EMA200: ${fmt(calc.ema200[li])}
+Volume vs 20d avg: ${calc.vol20[li]? (bars[li].volume/calc.vol20[li]).toFixed(2)+'x' : 'n/a'}
+OBV trend: ${obvSlopeLabel(calc.obv)}, CMF(20): ${fmt(calc.cmf[li],3)}
+Fundamentals (manual, may be blank): PE ${f.pe??'n/a'}, sector PE ${f.sectorpe??'n/a'}, EPS growth ${f.epsg??'n/a'}%, revenue growth ${f.revg??'n/a'}%, ROE ${f.roe??'n/a'}%, ROCE ${f.roce??'n/a'}%, D/E ${f.de??'n/a'}, promoter holding ${f.promoter??'n/a'}%
+Upstox options/institutional module: ${upstox}
+Bars available: ${bars.length} (from ${bars[0].date} to ${bars[li].date})`;
+}
+let chatHistory = [];
+document.getElementById('chatSendBtn').addEventListener('click', sendChat);
+document.getElementById('chatInput').addEventListener('keydown', e=>{ if(e.key==='Enter') sendChat(); });
+async function sendChat(){
+  const key = document.getElementById('groqKey').value.trim();
+  const model = document.getElementById('groqModel').value;
+  const input = document.getElementById('chatInput');
+  const question = input.value.trim();
+  if(!currentSymbol){ alert('Load a stock first.'); return; }
+  if(!key){ alert('Enter your Groq API key.'); return; }
+  if(!question) return;
+  chatHistory.push({role:'user', content:question});
+  renderChat();
+  input.value='';
+  const sysPrompt = `You are a stock analysis assistant. Answer ONLY using the structured data provided below about this one stock. If the data needed to answer isn't present (e.g. no news source, no Upstox connection, no fundamentals entered), say so explicitly rather than guessing or inventing numbers. Be concise and evidence-based, never give buy/sell instructions, and note this is not investment advice.
+
+DATA:
+${buildContext()}`;
+  try{
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method:'POST',
+      headers: {'Content-Type':'application/json', 'Authorization':'Bearer '+key},
+      body: JSON.stringify({ model, messages: [{role:'system',content:sysPrompt}, ...chatHistory.slice(-6)] })
+    });
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content || ('Error: ' + (data.error?.message || 'no response'));
+    chatHistory.push({role:'assistant', content:reply});
+  }catch(e){
+    chatHistory.push({role:'assistant', content:'Request failed: ' + e.message});
+  }
+  renderChat();
+}
+function renderChat(){
+  const el = document.getElementById('chat');
+  el.innerHTML = chatHistory.map(m=>`<div class="msg ${m.role==='user'?'user':'ai'}">${escapeHtml(m.content)}</div>`).join('');
+  el.scrollTop = el.scrollHeight;
+}
+function escapeHtml(s){ return s.replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+/* ============ TABS ============ */
+document.querySelectorAll('.tabbtn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tabbtn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tabpane').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+  });
+});
+
+if(Object.keys(DB).length){ document.getElementById('loadStatus').textContent = `${Object.keys(DB).length} symbol(s) already stored locally.`; }
+</script>
+</body>
+</html>
