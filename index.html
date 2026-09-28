@@ -118,6 +118,7 @@
     <div class="tabbar">
       <button class="tabbtn active" data-tab="structure">Structure</button>
       <button class="tabbtn" data-tab="smartmoney">Smart Money</button>
+      <button class="tabbtn" data-tab="ichi">Ichimoku / BB</button>
       <button class="tabbtn" data-tab="dna">Stock DNA</button>
       <button class="tabbtn" data-tab="psych">Psychology</button>
       <button class="tabbtn" data-tab="why">Why is it moving</button>
@@ -177,6 +178,28 @@
       </div>
     </div>
 
+
+    <!-- ICHIMOKU / BOLLINGER / VOLUME -->
+    <div class="tabpane" id="tab-ichi">
+      <div class="card" style="border-color:var(--orange)">
+        <h3>Combined outcome (daily chart)</h3>
+        <div id="ichiOutcome"></div>
+      </div>
+      <div class="card">
+        <h3>Chart</h3>
+        <div class="row" style="margin-bottom:8px;font-size:13px">
+          <label><input type="checkbox" id="togIchi" checked style="width:auto"> Ichimoku</label>
+          <label><input type="checkbox" id="togBB" checked style="width:auto"> Bollinger Bands</label>
+        </div>
+        <canvas id="ichiChart" style="height:300px"></canvas>
+        <div class="footNote">Last ~100 daily candles. Cloud green = Span A above Span B, red = below. Blue lines = Bollinger Bands (20, 2). Red line = Tenkan, light-blue line = Kijun. Bars at the bottom = volume.</div>
+      </div>
+      <div class="card"><h3>Ichimoku (9 / 26 / 52)</h3><div id="ichiPanel"></div></div>
+      <div class="card"><h3>Bollinger Bands (20, 2)</h3><div id="bbPanel"></div></div>
+      <div class="card"><h3>Volume</h3><div id="volPanel"></div>
+        <div class="footNote">This outcome is built only from the loaded daily price and volume data. It ignores news, your entry price, stop-loss and position size, and the thresholds are fixed judgment calls that haven't been tested to predict profit. Not investment advice.</div>
+      </div>
+    </div>
 
     <!-- STOCK DNA -->
     <div class="tabpane" id="tab-dna">
@@ -357,6 +380,8 @@ if (navigator.share) {
 let DB = JSON.parse(localStorage.getItem('msi_db') || '{}'); // { SYMBOL: { bars:[{date,open,high,low,close,volume,delivPer}], upstox:{} } }
 let currentSymbol = null;
 let lastSignal = null;
+let lastIchi = null;
+let lastIchiOutcome = null;
 
 function saveDB(){ localStorage.setItem('msi_db', JSON.stringify(DB)); }
 
@@ -597,6 +622,7 @@ function loadSymbol(sym){
   const regimeNow = classifyRegime(bars, calc, li);
   renderDNA(sym, bars, calc, li, volX, gap, {sm: smCtx, ms: msCtx, regime: regimeNow});
   renderLiquidityMap(bars, li);
+  renderIchiBB(bars, calc, li, volX);
   renderRegimeHistory(bars, calc);
   renderWhatChangedToday(bars, calc, li, volX, nearestRes, nearestSup, breakout, breakdown);
 
@@ -1004,6 +1030,242 @@ function renderWhatChangedToday(bars, calc, li, volX, nearestRes, nearestSup, br
   el.innerHTML = items.length ? items.map(([icon,text])=>`<div style="margin-bottom:6px">${icon} ${text}</div>`).join('') : '<div class="muted">No unusual changes flagged for the latest session.</div>';
 }
 
+/* ============ ICHIMOKU + BOLLINGER + VOLUME (daily, from loaded CSV) ============ */
+function hhll(bars,i,p){
+  if(i<p-1) return null;
+  let h=-Infinity,l=Infinity;
+  for(let j=i-p+1;j<=i;j++){ if(bars[j].high>h) h=bars[j].high; if(bars[j].low<l) l=bars[j].low; }
+  return {h,l};
+}
+function computeIchimoku(bars){
+  const tenkan=[],kijun=[],spanA=[],spanB=[];
+  for(let i=0;i<bars.length;i++){
+    const t=hhll(bars,i,9), k=hhll(bars,i,26), b=hhll(bars,i,52);
+    const tv=t?(t.h+t.l)/2:null, kv=k?(k.h+k.l)/2:null;
+    tenkan.push(tv); kijun.push(kv);
+    spanA.push(tv!=null&&kv!=null?(tv+kv)/2:null);
+    spanB.push(b?(b.h+b.l)/2:null);
+  }
+  // The cloud drawn at bar i uses spans calculated 26 bars earlier.
+  const cloudA=bars.map((_,i)=>i>=26?spanA[i-26]:null);
+  const cloudB=bars.map((_,i)=>i>=26?spanB[i-26]:null);
+  return {tenkan,kijun,spanA,spanB,cloudA,cloudB};
+}
+function computeBollinger(bars,p=20,k=2){
+  const mid=[],upper=[],lower=[],pctB=[],bw=[];
+  for(let i=0;i<bars.length;i++){
+    if(i<p-1){ mid.push(null);upper.push(null);lower.push(null);pctB.push(null);bw.push(null); continue; }
+    const seg=bars.slice(i-p+1,i+1).map(b=>b.close);
+    const m=seg.reduce((a,b)=>a+b,0)/p;
+    const sd=Math.sqrt(seg.reduce((a,b)=>a+(b-m)*(b-m),0)/p);
+    mid.push(m); upper.push(m+k*sd); lower.push(m-k*sd);
+    pctB.push(sd>0?(bars[i].close-(m-k*sd))/(2*k*sd):0.5);
+    bw.push(m?(2*k*sd)/m:null);
+  }
+  return {mid,upper,lower,pctB,bw};
+}
+function ichiLines(lines){
+  const icon={g:'🟢',r:'🔴',y:'🟡',n:'⚪'};
+  return lines.map(([c,t])=>`<div style="margin-bottom:6px;font-size:13.5px">${icon[c]||''} ${t}</div>`).join('');
+}
+function renderIchiBB(bars, calc, li, volX){
+  const ich=computeIchimoku(bars), bb=computeBollinger(bars);
+  lastIchi={bars,ich,bb};
+  const close=bars[li].close;
+  const modules=[]; // {name, score, max}
+
+  /* ---- Ichimoku ---- */
+  const iLines=[]; let iScore=0, iMax=0;
+  const tk=ich.tenkan[li], kj=ich.kijun[li], cA=ich.cloudA[li], cB=ich.cloudB[li];
+  if(cA!=null && cB!=null){
+    const top=Math.max(cA,cB), bot=Math.min(cA,cB);
+    iMax++;
+    if(close>top){ iScore++; iLines.push(['g','Price is above the cloud (bullish).']); }
+    else if(close<bot){ iScore--; iLines.push(['r','Price is below the cloud (bearish).']); }
+    else iLines.push(['y','Price is inside the cloud, so there is no clear trend.']);
+  } else {
+    iLines.push(['n',`Current cloud needs about 78 bars of data (you have ${bars.length}), so cloud position is skipped. Load 6 months or more for the full read.`]);
+  }
+  if(tk!=null && kj!=null){
+    iMax++;
+    if(tk>kj){ iScore++; iLines.push(['g','Tenkan is above Kijun (short-term momentum up).']); }
+    else if(tk<kj){ iScore--; iLines.push(['r','Tenkan is below Kijun (short-term momentum down).']); }
+    else iLines.push(['y','Tenkan equals Kijun (flat).']);
+    for(let j=li;j>=Math.max(1,li-4);j--){
+      if(ich.tenkan[j-1]!=null && ich.kijun[j-1]!=null && ich.tenkan[j]!=null && ich.kijun[j]!=null){
+        if(ich.tenkan[j-1]<=ich.kijun[j-1] && ich.tenkan[j]>ich.kijun[j]){ iLines.push(['g',`Bullish Tenkan/Kijun cross on ${bars[j].date}.`]); break; }
+        if(ich.tenkan[j-1]>=ich.kijun[j-1] && ich.tenkan[j]<ich.kijun[j]){ iLines.push(['r',`Bearish Tenkan/Kijun cross on ${bars[j].date}.`]); break; }
+      }
+    }
+    iMax++;
+    if(close>kj){ iScore++; iLines.push(['g',`Price is above Kijun (₹${kj.toFixed(2)}).`]); }
+    else { iScore--; iLines.push(['r',`Price is below Kijun (₹${kj.toFixed(2)}).`]); }
+  } else {
+    iLines.push(['n','Tenkan/Kijun need at least 26 bars.']);
+  }
+  if(li>=26){
+    iMax++;
+    if(close>bars[li-26].close){ iScore++; iLines.push(['g','Chikou (lagging line) is above the price from 26 bars ago.']); }
+    else { iScore--; iLines.push(['r','Chikou (lagging line) is below the price from 26 bars ago.']); }
+  }
+  if(ich.spanA[li]!=null && ich.spanB[li]!=null){
+    iMax++;
+    if(ich.spanA[li]>ich.spanB[li]){ iScore++; iLines.push(['g','Future cloud (26 bars ahead) is bullish.']); }
+    else { iScore--; iLines.push(['r','Future cloud (26 bars ahead) is bearish.']); }
+  }
+  if(iMax>0) modules.push({name:'Ichimoku', score:iScore, max:iMax});
+
+  /* ---- Bollinger ---- */
+  const bLines=[]; let bScore=0, bMax=0;
+  const m=bb.mid[li], up=bb.upper[li], lo=bb.lower[li], pb=bb.pctB[li], w=bb.bw[li];
+  if(m!=null){
+    bMax++;
+    if(close>m){ bScore++; bLines.push(['g',`Price is above the middle band (₹${m.toFixed(2)}).`]); }
+    else { bScore--; bLines.push(['r',`Price is below the middle band (₹${m.toFixed(2)}).`]); }
+    if(li>=24 && bb.mid[li-5]!=null){
+      bMax++;
+      if(m>bb.mid[li-5]){ bScore++; bLines.push(['g','Middle band is rising (20-day average trending up).']); }
+      else { bScore--; bLines.push(['r','Middle band is falling (20-day average trending down).']); }
+    }
+    bMax++;
+    if(pb>0.8){ bScore++; bLines.push(['g',`Price is near the upper band (%B ${pb.toFixed(2)}), which shows strength.`]); }
+    else if(pb<0.2){ bScore--; bLines.push(['r',`Price is near the lower band (%B ${pb.toFixed(2)}), which shows weakness.`]); }
+    else bLines.push(['y',`Price is mid-range inside the bands (%B ${pb.toFixed(2)}).`]);
+    bLines.push(['n',`Bands: upper ₹${up.toFixed(2)}, lower ₹${lo.toFixed(2)}.`]);
+    const bwHist=bb.bw.slice(Math.max(0,li-119),li+1).filter(v=>v!=null);
+    if(bwHist.length>=30){
+      const rank=bwHist.filter(v=>v<=w).length/bwHist.length;
+      if(rank<=0.2) bLines.push(['y','Bands are squeezed (unusually narrow). A bigger move may be coming, but the squeeze does not say which direction.']);
+      else if(rank>=0.8) bLines.push(['y','Bands are wide (high volatility), so moves may already be stretched.']);
+    }
+    const rsi=calc.rsi[li];
+    if(pb>1 && rsi>70) bLines.push(['r','Price closed outside the upper band with RSI above 70, so a pullback is more likely than a fresh leg up.']);
+    if(pb<0 && rsi<30) bLines.push(['y','Price closed outside the lower band with RSI below 30, so an oversold bounce is possible.']);
+    modules.push({name:'Bollinger', score:bScore, max:bMax});
+  } else {
+    bLines.push(['n','Bollinger Bands need at least 20 bars.']);
+  }
+
+  /* ---- Volume ---- */
+  const vLines=[]; let vScore=0, vMax=0;
+  if(li>=20){
+    let upV=0, dnV=0;
+    for(let j=li-9;j<=li;j++){ if(j<1) continue; if(bars[j].close>bars[j-1].close) upV+=bars[j].volume; else if(bars[j].close<bars[j-1].close) dnV+=bars[j].volume; }
+    if(upV+dnV>0){
+      vMax++;
+      const ratio=dnV>0?upV/dnV:99;
+      if(ratio>1.2){ vScore++; vLines.push(['g',`Last 10 days: volume on up days is ${ratio.toFixed(1)}x the volume on down days (buyers dominate).`]); }
+      else if(ratio<0.83){ vScore--; vLines.push(['r',`Last 10 days: volume on down days is ${(1/ratio).toFixed(1)}x the volume on up days (sellers dominate).`]); }
+      else vLines.push(['y','Last 10 days: up-day and down-day volume are roughly balanced.']);
+    }
+    vMax++;
+    const priceUp=close>bars[li-1].close;
+    if(volX!=null && volX>1.2){
+      if(priceUp){ vScore++; vLines.push(['g',`Today's volume is ${volX.toFixed(1)}x the 20-day average and price rose (confirmed move).`]); }
+      else { vScore--; vLines.push(['r',`Today's volume is ${volX.toFixed(1)}x the 20-day average and price fell (heavy selling).`]); }
+    } else if(volX!=null && volX<0.7){
+      vLines.push(['y',`Today's volume is only ${volX.toFixed(1)}x the 20-day average, so the move lacks conviction.`]);
+    } else if(volX!=null) vLines.push(['y',`Today's volume is ${volX.toFixed(1)}x the 20-day average (normal).`]);
+    vMax++;
+    const obvUp=calc.obv[li]-calc.obv[Math.max(0,li-10)];
+    if(obvUp>0){ vScore++; vLines.push(['g','On-balance volume is rising over the last 10 days.']); }
+    else if(obvUp<0){ vScore--; vLines.push(['r','On-balance volume is falling over the last 10 days.']); }
+    else vLines.push(['y','On-balance volume is flat.']);
+    modules.push({name:'Volume', score:vScore, max:vMax});
+  } else {
+    vLines.push(['n','Volume analysis needs at least ~20 bars.']);
+  }
+
+  document.getElementById('ichiPanel').innerHTML=ichiLines(iLines);
+  document.getElementById('bbPanel').innerHTML=ichiLines(bLines);
+  document.getElementById('volPanel').innerHTML=ichiLines(vLines);
+
+  /* ---- Combined outcome ---- */
+  const out=document.getElementById('ichiOutcome');
+  if(modules.length<2){
+    lastIchiOutcome=null;
+    out.innerHTML='<div class="muted">Not enough data yet. Load at least ~30 daily bars (6 months is better).</div>';
+  } else {
+    const avg=modules.reduce((a,mo)=>a+mo.score/mo.max,0)/modules.length;
+    let verdict, cls;
+    if(avg>=0.35){ verdict='BUY-leaning'; cls='g'; }
+    else if(avg<=-0.35){ verdict='SELL-leaning'; cls='r'; }
+    else { verdict='HOLD / WAIT'; cls='y'; }
+    const modLine=modules.map(mo=>{
+      const n=mo.score/mo.max; const c=n>=0.35?'g':n<=-0.35?'r':'y';
+      return `<div class="kv"><span>${mo.name}</span><span class="tag ${c}">${mo.score>0?'+':''}${mo.score} of ±${mo.max}</span></div>`;
+    }).join('');
+    lastIchiOutcome={verdict,avg:Math.round(avg*100)/100};
+    out.innerHTML=`
+      <div class="statusline"><span style="font-size:15px;font-weight:700">Outcome</span><span class="tag ${cls}" style="font-size:15px">${verdict}</span></div>
+      ${modLine}
+      <div class="footNote">Each module is scored from -1 to +1 and the three are averaged (${avg>=0?'+':''}${avg.toFixed(2)} now). Above +0.35 is BUY-leaning, below -0.35 is SELL-leaning, and anything between is HOLD / WAIT.</div>`;
+  }
+  drawIchiChart();
+}
+
+function drawIchiChart(){
+  if(!lastIchi) return;
+  const canvas=document.getElementById('ichiChart');
+  if(!canvas || canvas.clientWidth===0) return;
+  const {bars,ich,bb}=lastIchi;
+  const showI=document.getElementById('togIchi').checked, showB=document.getElementById('togBB').checked;
+  const N=Math.min(100,bars.length), start=bars.length-N;
+  const dpr=window.devicePixelRatio||1, w=canvas.clientWidth, h=300;
+  canvas.width=w*dpr; canvas.height=h*dpr;
+  const ctx=canvas.getContext('2d'); ctx.scale(dpr,dpr); ctx.clearRect(0,0,w,h);
+  const priceH=h*0.78, volTop=h*0.82, volH=h*0.18;
+  let hi=-Infinity, lo=Infinity;
+  const take=v=>{ if(v!=null){ if(v>hi) hi=v; if(v<lo) lo=v; } };
+  for(let i=start;i<bars.length;i++){
+    take(bars[i].high); take(bars[i].low);
+    if(showB){ take(bb.upper[i]); take(bb.lower[i]); }
+    if(showI){ take(ich.cloudA[i]); take(ich.cloudB[i]); take(ich.tenkan[i]); take(ich.kijun[i]); }
+  }
+  const pad=(hi-lo)*0.05||1; hi+=pad; lo-=pad;
+  const yP=v=>priceH-((v-lo)/(hi-lo))*priceH;
+  const cw=w/N, xAt=k=>k*cw+cw/2;
+  const line=(arr,color,dash)=>{
+    ctx.beginPath(); ctx.strokeStyle=color; ctx.lineWidth=1.3; ctx.setLineDash(dash||[]);
+    let started=false;
+    for(let k=0;k<N;k++){ const v=arr[start+k]; if(v==null){ started=false; continue; } if(!started){ ctx.moveTo(xAt(k),yP(v)); started=true; } else ctx.lineTo(xAt(k),yP(v)); }
+    ctx.stroke(); ctx.setLineDash([]);
+  };
+  if(showI){
+    for(let k=1;k<N;k++){
+      const a0=ich.cloudA[start+k-1], b0=ich.cloudB[start+k-1], a1=ich.cloudA[start+k], b1=ich.cloudB[start+k];
+      if(a0==null||b0==null||a1==null||b1==null) continue;
+      ctx.beginPath(); ctx.moveTo(xAt(k-1),yP(a0)); ctx.lineTo(xAt(k),yP(a1)); ctx.lineTo(xAt(k),yP(b1)); ctx.lineTo(xAt(k-1),yP(b0)); ctx.closePath();
+      ctx.fillStyle=a1>=b1?'rgba(74,222,128,0.22)':'rgba(248,113,113,0.22)'; ctx.fill();
+    }
+  }
+  if(showB){
+    ctx.beginPath(); let started=false;
+    for(let k=0;k<N;k++){ const v=bb.upper[start+k]; if(v==null) continue; if(!started){ ctx.moveTo(xAt(k),yP(v)); started=true; } else ctx.lineTo(xAt(k),yP(v)); }
+    for(let k=N-1;k>=0;k--){ const v=bb.lower[start+k]; if(v==null) continue; ctx.lineTo(xAt(k),yP(v)); }
+    ctx.closePath(); ctx.fillStyle='rgba(59,130,246,0.08)'; ctx.fill();
+    line(bb.upper,'#3b82f6'); line(bb.lower,'#3b82f6'); line(bb.mid,'#93a3bf',[4,3]);
+  }
+  if(showI){ line(ich.tenkan,'#f87171'); line(ich.kijun,'#60a5fa'); }
+  // candles
+  for(let k=0;k<N;k++){
+    const b=bars[start+k], up=b.close>=b.open, x=xAt(k);
+    ctx.strokeStyle=ctx.fillStyle=up?'#4ade80':'#f87171';
+    ctx.beginPath(); ctx.moveTo(x,yP(b.high)); ctx.lineTo(x,yP(b.low)); ctx.stroke();
+    const top=yP(Math.max(b.open,b.close)), bot=yP(Math.min(b.open,b.close));
+    ctx.fillRect(x-cw*0.35,top,cw*0.7,Math.max(1,bot-top));
+  }
+  // volume
+  let maxV=1; for(let k=0;k<N;k++) maxV=Math.max(maxV,bars[start+k].volume);
+  for(let k=0;k<N;k++){
+    const b=bars[start+k], vh=(b.volume/maxV)*volH;
+    ctx.fillStyle=b.close>=b.open?'rgba(74,222,128,0.5)':'rgba(248,113,113,0.5)';
+    ctx.fillRect(xAt(k)-cw*0.35, volTop+volH-vh, cw*0.7, vh);
+  }
+}
+document.getElementById('togIchi').addEventListener('change', drawIchiChart);
+document.getElementById('togBB').addEventListener('change', drawIchiChart);
+
 /* ============ WHY IS IT MOVING ============ */
 document.getElementById('whyBtn').addEventListener('click', ()=>{
   const date = document.getElementById('whyDateSelect').value;
@@ -1244,6 +1506,7 @@ RSI(14): ${fmt(calc.rsi[li])}, ADX(14): ${fmt(calc.adx[li])}, ATR(14): ${fmt(cal
 EMA20: ${fmt(calc.ema20[li])}, EMA50: ${fmt(calc.ema50[li])}, EMA200: ${fmt(calc.ema200[li])}
 Volume vs 20d avg: ${calc.vol20[li]? (bars[li].volume/calc.vol20[li]).toFixed(2)+'x' : 'n/a'}
 OBV trend: ${obvSlopeLabel(calc.obv)}, CMF(20): ${fmt(calc.cmf[li],3)}
+Ichimoku/Bollinger/volume outcome: ${lastIchiOutcome ? lastIchiOutcome.verdict + ' (average score ' + lastIchiOutcome.avg + ')' : 'not computed'}
 Rule-based signal in the app: ${lastSignal ? lastSignal.signal + ' (composite ' + lastSignal.composite + '/100, regime ' + lastSignal.regime + '). Reasons: ' + lastSignal.reasons.join('; ') : 'not computed'}
 Upstox options/institutional module: ${upstox}
 Bars available: ${bars.length} (from ${bars[0].date} to ${bars[li].date})`;
@@ -1305,6 +1568,7 @@ document.querySelectorAll('.tabbtn').forEach(btn=>{
     document.querySelectorAll('.tabpane').forEach(p=>p.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+    if(btn.dataset.tab==='ichi') drawIchiChart();
   });
 });
 
