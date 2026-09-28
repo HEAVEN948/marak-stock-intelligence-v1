@@ -123,7 +123,6 @@
       <button class="tabbtn" data-tab="why">Why is it moving</button>
       <button class="tabbtn" data-tab="pattern">Pattern history</button>
       <button class="tabbtn" data-tab="options">Options / Institutional</button>
-      <button class="tabbtn" data-tab="fund">Fundamentals</button>
       <button class="tabbtn" data-tab="ai">Ask AI</button>
     </div>
 
@@ -184,7 +183,7 @@
       <div class="card">
         <h3 id="dnaTitle">Stock DNA</h3>
         <div id="dnaBars" style="font-family:'Courier New',monospace"></div>
-        <div class="footNote">Fundamental & Valuation bars use the numbers you enter in the Fundamentals tab. Leave blank to exclude them from scoring.</div>
+        <div class="footNote">Each bar is computed from the loaded price/volume data. Risk measures how bumpy daily price swings are, not overall investment safety.</div>
       </div>
       <div class="card">
         <h3>Rule-based read (not investment advice)</h3>
@@ -273,26 +272,6 @@
       </div>
     </div>
 
-    <!-- FUNDAMENTALS -->
-    <div class="tabpane" id="tab-fund">
-      <div class="card">
-        <h3>Fundamentals (manual entry — no free live source)</h3>
-        <div class="grid3">
-          <label class="muted">PE<input id="f_pe" type="number" step="0.1"></label>
-          <label class="muted">Sector avg PE<input id="f_sectorpe" type="number" step="0.1"></label>
-          <label class="muted">EPS growth % (YoY)<input id="f_epsg" type="number" step="0.1"></label>
-          <label class="muted">Revenue growth % (YoY)<input id="f_revg" type="number" step="0.1"></label>
-          <label class="muted">ROE %<input id="f_roe" type="number" step="0.1"></label>
-          <label class="muted">ROCE %<input id="f_roce" type="number" step="0.1"></label>
-          <label class="muted">Debt/Equity<input id="f_de" type="number" step="0.01"></label>
-          <label class="muted">Operating margin %<input id="f_opm" type="number" step="0.1"></label>
-          <label class="muted">Promoter holding %<input id="f_promoter" type="number" step="0.1"></label>
-        </div>
-        <button id="fundSaveBtn" style="margin-top:10px">Save fundamentals</button>
-        <div class="footNote">Saved per symbol in your browser. Feeds the Fundamental/Valuation bars in Stock DNA. A results/annual-report parser isn't included — paste figures manually per quarter.</div>
-      </div>
-    </div>
-
     <!-- AI ASSISTANT -->
     <div class="tabpane" id="tab-ai">
       <div class="card">
@@ -310,7 +289,7 @@
           <input id="chatInput" placeholder='e.g. "Are institutions accumulating?"' style="flex:1">
           <button id="chatSendBtn">Ask</button>
         </div>
-        <div class="footNote">The AI answers only from the computed structure/DNA/psychology/fundamentals/options data currently loaded for this stock — it does not browse the web or hallucinate outside prompts, but data gaps (no Upstox connection, no fundamentals entered) mean it will say so rather than invent numbers.</div>
+        <div class="footNote">The AI answers only from the computed structure/DNA/smart-money/options data currently loaded for this stock. It does not browse the web, and if data is missing (for example no Upstox connection) it should say so rather than invent numbers.</div>
       </div>
     </div>
 
@@ -375,8 +354,9 @@ if (navigator.share) {
 }
 
 /* ============ STATE ============ */
-let DB = JSON.parse(localStorage.getItem('msi_db') || '{}'); // { SYMBOL: { bars:[{date,open,high,low,close,volume,delivPer}], fundamentals:{}, upstox:{} } }
+let DB = JSON.parse(localStorage.getItem('msi_db') || '{}'); // { SYMBOL: { bars:[{date,open,high,low,close,volume,delivPer}], upstox:{} } }
 let currentSymbol = null;
+let lastSignal = null;
 
 function saveDB(){ localStorage.setItem('msi_db', JSON.stringify(DB)); }
 
@@ -455,7 +435,7 @@ document.getElementById('csvFile').addEventListener('change', async (e)=>{
     const rows = parseCSV(text);
     for(const r of rows){
       const sym = r.symbol || file.name.replace(/\.csv$/i,'').toUpperCase();
-      if(!DB[sym]) DB[sym] = { bars:[], fundamentals:{}, upstox:{} };
+      if(!DB[sym]) DB[sym] = { bars:[], upstox:{} };
       // upsert by date
       const idx = DB[sym].bars.findIndex(b=>b.date===r.date);
       const bar = {date:r.date, open:r.open, high:r.high, low:r.low, close:r.close, volume:r.volume, delivPer:r.delivPer};
@@ -608,15 +588,14 @@ function loadSymbol(sym){
 
   drawChart(bars.slice(-90));
 
-  // STOCK DNA
-  renderDNA(sym, bars, calc, li, volX, gap);
-
   // PSYCHOLOGY
   renderPsychology(bars, calc, li, volX, trendRegime);
 
   // NEW: Smart Money, Market Structure, Liquidity Map, Regime, What Changed Today
-  renderSmartMoney(bars, calc, li, volX);
-  renderMarketStructure(bars, calc, li);
+  const smCtx = renderSmartMoney(bars, calc, li, volX);
+  const msCtx = renderMarketStructure(bars, calc, li);
+  const regimeNow = classifyRegime(bars, calc, li);
+  renderDNA(sym, bars, calc, li, volX, gap, {sm: smCtx, ms: msCtx, regime: regimeNow});
   renderLiquidityMap(bars, li);
   renderRegimeHistory(bars, calc);
   renderWhatChangedToday(bars, calc, li, volX, nearestRes, nearestSup, breakout, breakdown);
@@ -624,12 +603,6 @@ function loadSymbol(sym){
   // WHY tab date list
   const whySel = document.getElementById('whyDateSelect');
   whySel.innerHTML = bars.slice(-60).reverse().map(b=>`<option value="${b.date}">${b.date}</option>`).join('');
-
-  // fundamentals prefill
-  const f = rec.fundamentals||{};
-  ['pe','sectorpe','epsg','revg','roe','roce','de','opm','promoter'].forEach(k=>{
-    const el = document.getElementById('f_'+k); if(el) el.value = f[k] ?? '';
-  });
 
   currentSymbol = sym;
 }
@@ -665,24 +638,20 @@ function drawChart(bars){
 }
 
 /* ============ STOCK DNA ============ */
-function renderDNA(sym, bars, calc, li, volX, gap){
+function renderDNA(sym, bars, calc, li, volX, gap, ctx){
   document.getElementById('dnaTitle').textContent = sym + ' — Stock DNA';
-  const rec = DB[sym]; const f = rec.fundamentals || {};
   const clamp = v => Math.max(0,Math.min(100,v));
   const trendScore = clamp(50 + (calc.ema20[li]>calc.ema50[li]?20:-20) + (calc.adx[li]!=null?Math.min(30,calc.adx[li]):0));
   const momentumScore = clamp(calc.rsi[li]!=null ? calc.rsi[li] : 50);
   const volumeScore = clamp(volX!=null ? 50+Math.min(50,(volX-1)*50) : 50);
   const obvSlope = calc.obv[calc.obv.length-1]-calc.obv[Math.max(0,calc.obv.length-11)];
   const accumScore = clamp(50 + (obvSlope>0?20:-20) + (calc.cmf[li]!=null? calc.cmf[li]*200 : 0));
-  const fundamentalScore = (f.epsg!=null||f.revg!=null||f.roe!=null) ? clamp(50 + (parseFloat(f.epsg)||0)*1.5 + (parseFloat(f.roe)||0)) : null;
-  const valuationScore = (f.pe!=null && f.sectorpe) ? clamp(100 - (parseFloat(f.pe)/parseFloat(f.sectorpe))*50) : null;
   const atrp = calc.atr[li]!=null ? calc.atr[li]/bars[li].close*100 : null;
   const riskScore = atrp!=null ? clamp(100 - atrp*10) : null;
 
   const rows = [
-    ['TREND', trendScore, 0.20], ['MOMENTUM', momentumScore, 0.15], ['VOLUME', volumeScore, 0.10],
-    ['ACCUMULATION', accumScore, 0.15], ['FUNDAMENTAL', fundamentalScore, 0.15], ['VALUATION', valuationScore, 0.10],
-    ['RISK', riskScore, 0.15]
+    ['TREND', trendScore, 0.25], ['MOMENTUM', momentumScore, 0.20], ['VOLUME', volumeScore, 0.15],
+    ['ACCUMULATION', accumScore, 0.25], ['RISK', riskScore, 0.15]
   ];
   // ASCII block-bar rendering, matching the original spec's look, e.g. "TREND ████████░░ 82"
   document.getElementById('dnaBars').innerHTML = rows.map(([label,val])=>{
@@ -694,11 +663,11 @@ function renderDNA(sym, bars, calc, li, volX, gap){
     return `<div class="dnaRow"><span style="white-space:pre">${padLabel}</span><span style="color:${color};letter-spacing:-1px">${bar}</span><span style="margin-left:8px">${Math.round(val)}</span></div>`;
   }).join('');
 
-  renderRecommendation(rows);
+  renderRecommendation(rows, ctx);
 }
 
 /* ============ RULE-BASED READ (weighted composite of DNA scores — not advice, just arithmetic) ============ */
-function renderRecommendation(rows){
+function renderRecommendation(rows, ctx){
   const scored = rows.filter(([,val]) => val != null);
   const totalWeight = scored.reduce((s,[,,w]) => s+w, 0);
   const composite = totalWeight ? scored.reduce((s,[,val,w]) => s+val*w, 0) / totalWeight : null;
@@ -716,11 +685,49 @@ function renderRecommendation(rows){
   const sortedFactors = scored.slice().sort((a,b) => b[1]-a[1]);
   const strongest = sortedFactors[0], weakest = sortedFactors[sortedFactors.length-1];
 
+  // ---- Buy / Hold / Sell signal (fixed rules, shown with reasons) ----
+  const regime = ctx && ctx.regime;
+  const sm = ctx && ctx.sm;
+  const ms = ctx && ctx.ms;
+  const bullRegime = ['Accumulation','Bull trend','Breakout'].includes(regime);
+  const bearRegime = ['Breakdown','Distribution'].includes(regime);
+  const failedBO = !!(sm && sm.failedBreakout);
+  const distHigh = !!(sm && sm.possibleDistribution);
+  const bearChoch = !!(ms && ms.chochDir === 'bearish');
+
+  const sellReasons = [];
+  if(composite < 35) sellReasons.push(`Composite score is low (${Math.round(composite)}/100)`);
+  if(bearRegime) sellReasons.push(`Regime is ${regime}`);
+  if(bearChoch) sellReasons.push('Bearish CHOCH: structure broke against the uptrend');
+
+  const buyChecks = [
+    [composite >= 65, `Composite score ${Math.round(composite)}/100 (needs 65+)`],
+    [bullRegime, `Regime: ${regime || 'not enough bars'} (needs Accumulation, Bull trend or Breakout)`],
+    [!failedBO, failedBO ? 'Failed breakout flagged' : 'No failed breakout'],
+    [!distHigh, distHigh ? 'Possible distribution at highs flagged' : 'No distribution-at-highs flag'],
+    [!bearChoch, bearChoch ? 'Bearish CHOCH present' : 'No bearish CHOCH']
+  ];
+  let signal, sigCls, reasonLines;
+  if(sellReasons.length){
+    signal = 'SELL / AVOID'; sigCls = 'r';
+    reasonLines = sellReasons.map(t => `✗ ${t}`);
+  } else if(buyChecks.every(([ok]) => ok)){
+    signal = 'BUY'; sigCls = 'g';
+    reasonLines = buyChecks.map(([,t]) => `✓ ${t}`);
+  } else {
+    signal = 'HOLD / WAIT'; sigCls = 'y';
+    reasonLines = buyChecks.map(([ok,t]) => `${ok?'✓':'✗'} ${t}`);
+  }
+  lastSignal = { signal, composite: Math.round(composite), regime: regime || null, reasons: reasonLines };
+
   panel.innerHTML = `
+    <div class="statusline"><span style="font-size:15px;font-weight:700">Signal</span><span class="tag ${sigCls}" style="font-size:15px">${signal}</span></div>
+    <div style="margin:8px 0 12px;font-size:13px;line-height:1.6">${reasonLines.join('<br>')}</div>
     <div class="statusline"><span style="font-size:15px;font-weight:700">Composite score</span><span class="tag ${cls}" style="font-size:14px">${band} — ${Math.round(composite)}/100</span></div>
     <div class="kv"><span>Strongest factor</span><span>${strongest[0]} (${Math.round(strongest[1])})</span></div>
     <div class="kv"><span>Weakest factor</span><span>${weakest[0]} (${Math.round(weakest[1])})</span></div>
     ${missing.length ? `<div class="kv"><span>Excluded (no data)</span><span>${missing.join(', ')}</span></div>` : ''}
+    <div class="footNote">SELL fires if any sell condition is true. BUY needs every check ticked. Anything else is HOLD / WAIT. Thresholds are fixed judgment calls, not proven to predict profit, and the signal ignores news, your entry price, stop-loss and position size.</div>
   `;
 }
 
@@ -733,7 +740,6 @@ function renderPsychology(bars, calc, li, volX, trendRegime){
     ['Delivery', bars[li].delivPer!=null ? (bars[li].delivPer>60?'g':bars[li].delivPer<30?'r':'y') : 'n', bars[li].delivPer!=null? bars[li].delivPer+'%' : 'no DELIV_PER column'],
     ['Momentum', calc.rsi[li]>55?'g':calc.rsi[li]<45?'r':'y', 'RSI '+fmt(calc.rsi[li])],
     ['Institutional Flow', 'n', upstoxConnected? 'from Upstox OI' : 'connect Upstox'],
-    ['Valuation', 'n', 'enter fundamentals'],
     ['Options Position', 'n', upstoxConnected? 'from Upstox OI' : 'connect Upstox'],
     ['News Sentiment', 'n', 'no news source connected']
   ];
@@ -746,7 +752,7 @@ function renderPsychology(bars, calc, li, volX, trendRegime){
 /* ============ SMART MONEY / ACCUMULATION ENGINE ============ */
 function renderSmartMoney(bars, calc, li, volX){
   const panel = document.getElementById('smartMoneyPanel');
-  if(li<20 || calc.vol20[li]==null){ panel.innerHTML = '<div class="muted">Need at least ~20 bars for this read.</div>'; return; }
+  if(li<20 || calc.vol20[li]==null){ panel.innerHTML = '<div class="muted">Need at least ~20 bars for this read.</div>'; return null; }
   const priceUp = bars[li].close > bars[li-1].close;
   const volHigh = volX!=null && volX > 1.2;
   const volLow = volX!=null && volX < 0.8;
@@ -809,13 +815,14 @@ function renderSmartMoney(bars, calc, li, volX){
     <div class="kv"><span>Failed breakout</span><span>${failedBreakout?'🔴 Flagged':'— none'}</span></div>
     ${evidence!=null ? `<div class="kv"><span style="font-weight:700">Evidence strength</span><span style="font-weight:700">${evidence}/100</span></div>` : ''}
   `;
+  return { quadrant, failedBreakout, possibleDistribution, evidence };
 }
 
 /* ============ MARKET STRUCTURE ENGINE (HH/HL/LH/LL, BOS/CHOCH, equal highs/lows) ============ */
 function renderMarketStructure(bars, calc, li){
   const panel = document.getElementById('marketStructurePanel');
   const points = getSwingPoints(bars, 3);
-  if(points.length<4){ panel.innerHTML = '<div class="muted">Not enough swing points yet — need more bars.</div>'; return; }
+  if(points.length<4){ panel.innerHTML = '<div class="muted">Not enough swing points yet — need more bars.</div>'; return null; }
 
   const swingHighs = points.filter(p=>p.type==='high');
   const swingLows = points.filter(p=>p.type==='low');
@@ -832,10 +839,12 @@ function renderMarketStructure(bars, calc, li){
   const lastSwingLow = swingLows[swingLows.length-1];
   const close = bars[li].close;
 
-  let bos = null, choch = null;
+  let bos = null, choch = null, chochDir = null;
   if(isUptrend && lastSwingHigh && close > lastSwingHigh.price) bos = `BOS (bullish) — closed above swing high ₹${lastSwingHigh.price.toFixed(2)} from ${lastSwingHigh.date}`;
+  if(isUptrend && lastSwingLow && close < lastSwingLow.price) chochDir = 'bearish';
   if(isUptrend && lastSwingLow && close < lastSwingLow.price) choch = `CHOCH (possible bearish reversal) — closed below swing low ₹${lastSwingLow.price.toFixed(2)} from ${lastSwingLow.date}`;
   if(isDowntrend && lastSwingLow && close < lastSwingLow.price) bos = `BOS (bearish) — closed below swing low ₹${lastSwingLow.price.toFixed(2)} from ${lastSwingLow.date}`;
+  if(isDowntrend && lastSwingHigh && close > lastSwingHigh.price) chochDir = 'bullish';
   if(isDowntrend && lastSwingHigh && close > lastSwingHigh.price) choch = `CHOCH (possible bullish reversal) — closed above swing high ₹${lastSwingHigh.price.toFixed(2)} from ${lastSwingHigh.date}`;
 
   // Equal highs / equal lows (liquidity pools) — last 3 of each, within 0.3% tolerance
@@ -863,6 +872,7 @@ function renderMarketStructure(bars, calc, li){
     <div class="kv"><span>Previous week H/L (approx)</span><span>${prevWeekHigh?`₹${prevWeekHigh.toFixed(2)} / ₹${prevWeekLow.toFixed(2)}`:'-'}</span></div>
     <div class="kv"><span>52-week H/L (from loaded data)</span><span>₹${high52.toFixed(2)} / ₹${low52.toFixed(2)}</span></div>
   `;
+  return { chochDir, bos: !!bos };
 }
 
 /* ============ LIQUIDITY MAP ============ */
@@ -1223,25 +1233,10 @@ document.getElementById('fiiFetchBtn').addEventListener('click', async ()=>{
   }
 });
 
-/* ============ FUNDAMENTALS SAVE ============ */
-document.getElementById('fundSaveBtn').addEventListener('click', ()=>{
-  if(!currentSymbol) return;
-  const f = {};
-  ['pe','sectorpe','epsg','revg','roe','roce','de','opm','promoter'].forEach(k=>{
-    const v = document.getElementById('f_'+k).value;
-    f[k] = v===''? null : parseFloat(v);
-  });
-  DB[currentSymbol].fundamentals = f;
-  saveDB();
-  loadSymbol(currentSymbol); // refresh DNA bars
-  alert('Fundamentals saved for ' + currentSymbol);
-});
-
 /* ============ AI ASSISTANT (Groq) ============ */
 function buildContext(){
   const rec = DB[currentSymbol]; const bars = rec.bars; const li = bars.length-1;
   const calc = computeAll(bars);
-  const f = rec.fundamentals||{};
   const upstox = rec.upstox?.token ? 'connected' : 'not connected';
   return `Stock: ${currentSymbol}
 Last close: ${bars[li].close} on ${bars[li].date}
@@ -1249,7 +1244,7 @@ RSI(14): ${fmt(calc.rsi[li])}, ADX(14): ${fmt(calc.adx[li])}, ATR(14): ${fmt(cal
 EMA20: ${fmt(calc.ema20[li])}, EMA50: ${fmt(calc.ema50[li])}, EMA200: ${fmt(calc.ema200[li])}
 Volume vs 20d avg: ${calc.vol20[li]? (bars[li].volume/calc.vol20[li]).toFixed(2)+'x' : 'n/a'}
 OBV trend: ${obvSlopeLabel(calc.obv)}, CMF(20): ${fmt(calc.cmf[li],3)}
-Fundamentals (manual, may be blank): PE ${f.pe??'n/a'}, sector PE ${f.sectorpe??'n/a'}, EPS growth ${f.epsg??'n/a'}%, revenue growth ${f.revg??'n/a'}%, ROE ${f.roe??'n/a'}%, ROCE ${f.roce??'n/a'}%, D/E ${f.de??'n/a'}, promoter holding ${f.promoter??'n/a'}%
+Rule-based signal in the app: ${lastSignal ? lastSignal.signal + ' (composite ' + lastSignal.composite + '/100, regime ' + lastSignal.regime + '). Reasons: ' + lastSignal.reasons.join('; ') : 'not computed'}
 Upstox options/institutional module: ${upstox}
 Bars available: ${bars.length} (from ${bars[0].date} to ${bars[li].date})`;
 }
@@ -1278,7 +1273,7 @@ async function sendChat(){
   chatHistory.push({role:'user', content:question});
   renderChat();
   input.value='';
-  const sysPrompt = `You are a stock analysis assistant. Answer ONLY using the structured data provided below about this one stock. If the data needed to answer isn't present (e.g. no news source, no Upstox connection, no fundamentals entered), say so explicitly rather than guessing or inventing numbers. Be concise and evidence-based, never give buy/sell instructions, and note this is not investment advice.
+  const sysPrompt = `You are a stock analysis assistant. Answer ONLY using the structured data provided below about this one stock. If the data needed to answer isn't present (e.g. no news source, no Upstox connection), say so explicitly rather than guessing or inventing numbers. Be concise and evidence-based, you may explain the app's own rule-based signal and its reasons, but never give personalized buy/sell instructions, and note this is not investment advice.
 
 DATA:
 ${buildContext()}`;
