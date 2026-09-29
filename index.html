@@ -1474,15 +1474,24 @@ async function fetchIndexTicker(){
       const entries = Object.values(json.data || {});
       if(!entries.length) continue;
       const parts = entries.map(q=>{
-        const name = (q.trading_symbol || q.symbol || '').includes('BANK') || (q.trading_symbol||'').toUpperCase().includes('BANK') ? 'BANK NIFTY' : 'NIFTY 50';
+        const nameStr = (q.trading_symbol || q.symbol || '').toUpperCase();
+        const name = nameStr.includes('BANK') ? 'BANK NIFTY' : 'NIFTY 50';
         const ltp = q.last_price;
         const prevClose = q.ohlc && q.ohlc.close;
         const chg = (ltp!=null && prevClose) ? ltp-prevClose : null;
         const chgP = (chg!=null && prevClose) ? chg/prevClose*100 : null;
         const cls = chgP==null ? '' : chgP>=0?'up':'down';
-        return `<span><b>${name}</b> ${ltp!=null?ltp.toFixed(2):'-'} ${chgP!=null?`<span class="${cls}">${chgP>=0?'+':''}${chgP.toFixed(2)}%</span>`:''}</span>`;
+        return {name, ltp, chgP, cls};
       });
-      el.innerHTML = parts.join('') + ' <button class="ghost" id="tickerRefresh" style="padding:2px 8px;font-size:11px;margin-left:auto">↻</button>';
+      // Safety net: if name detection still produced the same label twice, tell them apart by value
+      // (Bank Nifty trades meaningfully higher than Nifty 50), rather than showing two identical labels.
+      if(parts.length===2 && parts[0].name===parts[1].name && parts[0].ltp!=null && parts[1].ltp!=null){
+        const hiIdx = parts[0].ltp >= parts[1].ltp ? 0 : 1;
+        parts[hiIdx].name = 'BANK NIFTY'; parts[1-hiIdx].name = 'NIFTY 50';
+      }
+      el.innerHTML = parts.map(p=>
+        `<span><b>${p.name}</b> ${p.ltp!=null?p.ltp.toFixed(2):'-'} ${p.chgP!=null?`<span class="${p.cls}">${p.chgP>=0?'+':''}${p.chgP.toFixed(2)}%</span>`:''}</span>`
+      ).join('') + ' <button class="ghost" id="tickerRefresh" style="padding:2px 8px;font-size:11px;margin-left:auto">↻</button>';
       document.getElementById('tickerRefresh').addEventListener('click', fetchIndexTicker);
       return;
     }catch(e){ /* try next key spelling */ }
