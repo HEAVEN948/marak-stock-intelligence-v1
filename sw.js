@@ -1,6 +1,6 @@
 // Marak Stock Intelligence — service worker
 // IMPORTANT: bump CACHE_VERSION every time you redeploy index.html, or installed users will keep seeing the old cached version.
-const CACHE_VERSION = 'msi-v8';
+const CACHE_VERSION = 'msi-v9';
 const CORE_ASSETS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './icon-512-maskable.png'];
 
 self.addEventListener('install', (event) => {
