@@ -84,6 +84,9 @@
 <div id="updateBanner" style="display:none;background:var(--orange);color:#1a1a1a;padding:8px 16px;text-align:center;font-size:13px;font-weight:600">
   A new version is available. <button id="updateBtn" style="background:#1a1a1a;color:#fff;border:none;padding:4px 12px;border-radius:6px;margin-left:8px;font-weight:600">Reload to update</button>
 </div>
+<div id="indexTicker" style="display:flex;gap:18px;padding:8px 16px;background:var(--card2);border-bottom:1px solid var(--border);font-size:13px;align-items:center;overflow-x:auto">
+  <span class="muted">Indices: —</span>
+</div>
 
 <main>
 
@@ -759,7 +762,7 @@ function renderRecommendation(rows, ctx){
 
 /* ============ PSYCHOLOGY GRID ============ */
 function renderPsychology(bars, calc, li, volX, trendRegime){
-  const upstoxConnected = !!DB[currentSymbol]?.upstox?.token;
+  const upstoxConnected = !!getGlobalUpstoxToken();
   const items = [
     ['Trend', trendRegime.includes('Bullish')?'g':trendRegime.includes('Bearish')?'r':'y', trendRegime.replace(/🟢|🔴|🟡/g,'').trim()],
     ['Volume', volX>1.2?'g':volX<0.8?'r':'y', volX!=null? (volX*100).toFixed(0)+'% of 20d avg' : 'n/a'],
@@ -1413,11 +1416,15 @@ document.getElementById('instrLookupBtn').addEventListener('click', async ()=>{
   });
 });
 
+/* ============ Upstox token: now global (one token for the whole app, not per-symbol) ============ */
+function getGlobalUpstoxToken(){ return localStorage.getItem('msi_upstox_token') || ''; }
+function setGlobalUpstoxToken(t){ localStorage.setItem('msi_upstox_token', t); }
+
 document.getElementById('upstoxSaveBtn').addEventListener('click', ()=>{
-  if(!currentSymbol) return;
-  DB[currentSymbol].upstox.token = document.getElementById('upstoxToken').value.trim();
-  saveDB();
-  document.getElementById('upstoxStatus').textContent = 'Token saved locally for ' + currentSymbol + '.';
+  const token = document.getElementById('upstoxToken').value.trim();
+  setGlobalUpstoxToken(token);
+  document.getElementById('upstoxStatus').textContent = 'Token saved — used for every stock and for the index ticker at the top.';
+  fetchIndexTicker();
 });
 
 document.getElementById('upstoxFetchBtn').addEventListener('click', async ()=>{
@@ -1440,11 +1447,51 @@ document.getElementById('upstoxFetchBtn').addEventListener('click', async ()=>{
     const data = await res.json();
     renderOptionChain(data.data || []);
     statusEl.textContent = 'Option chain loaded.';
-    if(currentSymbol){ DB[currentSymbol].upstox = {token, instrumentKey, expiry, fetchedAt: Date.now()}; saveDB(); }
+    setGlobalUpstoxToken(token);
   }catch(err){
     statusEl.textContent = 'Fetch failed: ' + err.message + '. Upstox tokens expire daily and instrument keys must match their instrument master exactly — check both.';
   }
 });
+
+/* ============ NIFTY 50 / BANK NIFTY TICKER (top of app) ============ */
+async function fetchIndexTicker(){
+  const el = document.getElementById('indexTicker');
+  const token = getGlobalUpstoxToken();
+  if(!token){ el.innerHTML = '<span class="muted">Indices: paste your Upstox token in the Options tab to show Nifty 50 / Bank Nifty here.</span>'; return; }
+  el.innerHTML = '<span class="muted">Loading Nifty 50 / Bank Nifty...</span>';
+  // Upstox has used slightly different index naming across API versions/docs, so try both known spellings.
+  const keySets = [
+    ['NSE_INDEX|Nifty 50','NSE_INDEX|Nifty Bank'],
+    ['NSE_INDEX|Nifty 50','NSE_INDEX|Bank Nifty']
+  ];
+  for(const keys of keySets){
+    try{
+      const url = `https://api.upstox.com/v2/market-quote/quotes?instrument_key=${encodeURIComponent(keys.join(','))}`;
+      let res;
+      try{ res = await fetch(url, { headers: { 'Accept':'application/json', 'Authorization':'Bearer '+token } }); if(!res.ok) throw new Error(res.status); }
+      catch(e){ res = await proxyFetch(url, { headers: { 'Accept':'application/json', 'Authorization':'Bearer '+token } }); }
+      const json = await res.json();
+      const entries = Object.values(json.data || {});
+      if(!entries.length) continue;
+      const parts = entries.map(q=>{
+        const name = (q.trading_symbol || q.symbol || '').includes('BANK') || (q.trading_symbol||'').toUpperCase().includes('BANK') ? 'BANK NIFTY' : 'NIFTY 50';
+        const ltp = q.last_price;
+        const prevClose = q.ohlc && q.ohlc.close;
+        const chg = (ltp!=null && prevClose) ? ltp-prevClose : null;
+        const chgP = (chg!=null && prevClose) ? chg/prevClose*100 : null;
+        const cls = chgP==null ? '' : chgP>=0?'up':'down';
+        return `<span><b>${name}</b> ${ltp!=null?ltp.toFixed(2):'-'} ${chgP!=null?`<span class="${cls}">${chgP>=0?'+':''}${chgP.toFixed(2)}%</span>`:''}</span>`;
+      });
+      el.innerHTML = parts.join('') + ' <button class="ghost" id="tickerRefresh" style="padding:2px 8px;font-size:11px;margin-left:auto">↻</button>';
+      document.getElementById('tickerRefresh').addEventListener('click', fetchIndexTicker);
+      return;
+    }catch(e){ /* try next key spelling */ }
+  }
+  el.innerHTML = '<span class="muted">Could not load indices right now. </span><button class="ghost" id="tickerRefresh" style="padding:2px 8px;font-size:11px">Retry</button>';
+  document.getElementById('tickerRefresh').addEventListener('click', fetchIndexTicker);
+}
+document.getElementById('upstoxToken').value = getGlobalUpstoxToken();
+fetchIndexTicker();
 
 function renderOptionChain(chain){
   if(!chain.length){ document.getElementById('optionsTableWrap').innerHTML = '<div class="muted">No option chain data returned.</div>'; return; }
