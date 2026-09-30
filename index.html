@@ -1483,7 +1483,7 @@ async function fetchIndexTicker(){
         if(chg==null && q.ohlc && q.ohlc.close!=null){ prevClose = q.ohlc.close; chg = (ltp!=null) ? ltp-prevClose : null; }
         const chgP = (chg!=null && prevClose) ? chg/prevClose*100 : null;
         const cls = chgP==null ? '' : chgP>=0?'up':'down';
-        return {name, ltp, chgP, cls};
+        return {name, ltp, chg, chgP, cls};
       });
       // Safety net: if name detection still produced the same label twice, tell them apart by value
       // (Bank Nifty trades meaningfully higher than Nifty 50), rather than showing two identical labels.
@@ -1492,7 +1492,7 @@ async function fetchIndexTicker(){
         parts[hiIdx].name = 'BANK NIFTY'; parts[1-hiIdx].name = 'NIFTY 50';
       }
       el.innerHTML = parts.map(p=>
-        `<span><b>${p.name}</b> ${p.ltp!=null?p.ltp.toFixed(2):'-'} ${p.chgP!=null?`<span class="${p.cls}">${p.chgP>=0?'+':''}${p.chgP.toFixed(2)}%</span>`:''}</span>`
+        `<span><b>${p.name}</b> ${p.ltp!=null?p.ltp.toFixed(2):'-'} ${p.chg!=null?`<span class="${p.cls}">${p.chg>=0?'+':''}${p.chg.toFixed(2)} (${p.chgP>=0?'+':''}${p.chgP.toFixed(2)}%)</span>`:''}</span>`
       ).join('') + ' <button class="ghost" id="tickerRefresh" style="padding:2px 8px;font-size:11px;margin-left:auto">↻</button>';
       document.getElementById('tickerRefresh').addEventListener('click', fetchIndexTicker);
       return;
