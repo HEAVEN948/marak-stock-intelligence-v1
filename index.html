@@ -1477,8 +1477,10 @@ async function fetchIndexTicker(){
         const nameStr = (q.trading_symbol || q.symbol || '').toUpperCase();
         const name = nameStr.includes('BANK') ? 'BANK NIFTY' : 'NIFTY 50';
         const ltp = q.last_price;
-        const prevClose = q.ohlc && q.ohlc.close;
-        const chg = (ltp!=null && prevClose) ? ltp-prevClose : null;
+        // Upstox's ohlc.close in this endpoint is a live/current snapshot, not yesterday's close — it was
+        // landing at (or near) last_price and making every change show as 0%. net_change is the real field.
+        let chg = q.net_change, prevClose = (ltp!=null && chg!=null) ? ltp - chg : null;
+        if(chg==null && q.ohlc && q.ohlc.close!=null){ prevClose = q.ohlc.close; chg = (ltp!=null) ? ltp-prevClose : null; }
         const chgP = (chg!=null && prevClose) ? chg/prevClose*100 : null;
         const cls = chgP==null ? '' : chgP>=0?'up':'down';
         return {name, ltp, chgP, cls};
@@ -1501,6 +1503,9 @@ async function fetchIndexTicker(){
 }
 document.getElementById('upstoxToken').value = getGlobalUpstoxToken();
 fetchIndexTicker();
+// Auto-refresh while the app is actually visible (skip when backgrounded, to save battery/data).
+setInterval(()=>{ if(!document.hidden) fetchIndexTicker(); }, 45000);
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) fetchIndexTicker(); });
 
 function renderOptionChain(chain){
   if(!chain.length){ document.getElementById('optionsTableWrap').innerHTML = '<div class="muted">No option chain data returned.</div>'; return; }
