@@ -74,6 +74,11 @@
 <body>
 
 <header>
+  <div class="logo">Mi</div>
+  <div class="brand">Marak Stock Intelligence<small>Marak Innovation · offline-first</small></div>
+  <div style="margin-left:auto;display:flex;gap:8px">
+    <button class="ghost" id="shareBtn" style="padding:7px 10px;font-size:12px;display:none">Share</button>
+    <button class="secondary" id="installBtn" style="padding:7px 10px;font-size:12px;display:none">Install</button>
   </div>
 </header>
 <div id="updateBanner" style="display:none;background:var(--orange);color:#1a1a1a;padding:8px 16px;text-align:center;font-size:13px;font-weight:600">
@@ -105,6 +110,18 @@
           <div id="symTitle" style="font-weight:700;font-size:18px"></div>
           <div class="price" id="symPrice"></div>
           <div class="chg" id="symChg"></div>
+          <div id="symAnomalyBadge" style="margin-top:4px"></div>
+        </div>
+        <div style="text-align:right">
+          <div class="muted" id="symDate"></div>
+          <div class="muted" id="symBars"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tabbar">
+      <button class="tabbtn active" data-tab="structure">Structure</button>
+      <button class="tabbtn" data-tab="smartmoney">Smart Money</button>
       <button class="tabbtn" data-tab="ichi">Ichimoku / BB</button>
       <button class="tabbtn" data-tab="dna">Stock DNA</button>
       <button class="tabbtn" data-tab="psych">Psychology</button>
@@ -476,6 +493,8 @@ function refreshSymbolSelect(){
   const sel = document.getElementById('symbolSelect');
   sel.innerHTML = '<option value="">Select loaded symbol...</option>' +
     Object.keys(DB).sort().map(s=>`<option value="${s}">${s} (${DB[s].bars.length} bars)</option>`).join('');
+}
+document.getElementById('symbolSelect').addEventListener('change', e=>{
   if(e.target.value){ currentSymbol = e.target.value; loadSymbol(currentSymbol); }
 });
 refreshSymbolSelect();
@@ -1443,6 +1462,7 @@ document.getElementById('instrLookupBtn').addEventListener('click', async ()=>{
       const chipsEl = document.getElementById('expiryChips');
       if(expiries.length){
         chipsEl.innerHTML = 'Available expiries: ' + expiries.map(d=>`<button class="ghost expiryChip" data-d="${d}" style="padding:4px 10px;font-size:12px;margin:2px">${d}</button>`).join('');
+        document.querySelectorAll('.expiryChip').forEach(c=> c.addEventListener('click', ()=>{ document.getElementById('upstoxExpiry').value = c.dataset.d; }));
       } else {
         chipsEl.innerHTML = '<span class="muted">No F&O expiries found for this symbol — it may not trade in derivatives.</span>';
       }
