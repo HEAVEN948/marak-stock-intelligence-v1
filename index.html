@@ -74,11 +74,6 @@
 <body>
 
 <header>
-  <div class="logo">Mi</div>
-  <div class="brand">Marak Stock Intelligence<small>Marak Innovation · offline-first</small></div>
-  <div style="margin-left:auto;display:flex;gap:8px">
-    <button class="ghost" id="shareBtn" style="padding:7px 10px;font-size:12px;display:none">Share</button>
-    <button class="secondary" id="installBtn" style="padding:7px 10px;font-size:12px;display:none">Install</button>
   </div>
 </header>
 <div id="updateBanner" style="display:none;background:var(--orange);color:#1a1a1a;padding:8px 16px;text-align:center;font-size:13px;font-weight:600">
@@ -110,17 +105,6 @@
           <div id="symTitle" style="font-weight:700;font-size:18px"></div>
           <div class="price" id="symPrice"></div>
           <div class="chg" id="symChg"></div>
-        </div>
-        <div style="text-align:right">
-          <div class="muted" id="symDate"></div>
-          <div class="muted" id="symBars"></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="tabbar">
-      <button class="tabbtn active" data-tab="structure">Structure</button>
-      <button class="tabbtn" data-tab="smartmoney">Smart Money</button>
       <button class="tabbtn" data-tab="ichi">Ichimoku / BB</button>
       <button class="tabbtn" data-tab="dna">Stock DNA</button>
       <button class="tabbtn" data-tab="psych">Psychology</button>
@@ -135,6 +119,11 @@
       <div class="card" style="border-color:var(--orange)">
         <h3>What changed today</h3>
         <div id="whatChangedToday"></div>
+      </div>
+      <div class="card">
+        <h3>Unusual activity</h3>
+        <div id="unusualActivity"></div>
+        <div class="footNote">Flags today's volume, price move and gap against this stock's own recent range (z-score vs the last 30 sessions) — not a flat threshold applied to every stock alike. |z| above 3 is flagged as unusual, 2 to 3 as borderline.</div>
       </div>
       <div class="card">
         <h3>Price & market structure</h3>
@@ -487,8 +476,6 @@ function refreshSymbolSelect(){
   const sel = document.getElementById('symbolSelect');
   sel.innerHTML = '<option value="">Select loaded symbol...</option>' +
     Object.keys(DB).sort().map(s=>`<option value="${s}">${s} (${DB[s].bars.length} bars)</option>`).join('');
-}
-document.getElementById('symbolSelect').addEventListener('change', e=>{
   if(e.target.value){ currentSymbol = e.target.value; loadSymbol(currentSymbol); }
 });
 refreshSymbolSelect();
@@ -628,6 +615,7 @@ function loadSymbol(sym){
   renderIchiBB(bars, calc, li, volX);
   renderRegimeHistory(bars, calc);
   renderWhatChangedToday(bars, calc, li, volX, nearestRes, nearestSup, breakout, breakdown);
+  renderUnusualActivity(bars, li);
 
   // WHY tab date list
   const whySel = document.getElementById('whyDateSelect');
@@ -1006,6 +994,53 @@ function renderRegimeHistory(bars, calc){
   document.getElementById('regimeHistory').innerHTML = recent.length ? recent.map((t,idx)=>
     `${t.date} ─── ${t.regime}${idx===recent.length-1?' (current)':''}`
   ).join('<br>') : '<span class="muted">No regime changes detected yet in the loaded history.</span>';
+}
+
+/* ============ UNUSUAL ACTIVITY (z-score vs this stock's own recent range) ============ */
+function mean(arr){ return arr.reduce((a,b)=>a+b,0)/arr.length; }
+function stddev(arr){ const m=mean(arr); return Math.sqrt(arr.reduce((a,b)=>a+(b-m)*(b-m),0)/arr.length); }
+function zscore(value, history){
+  if(history.length<10) return null; // too little history to call anything "unusual" with confidence
+  const m=mean(history), sd=stddev(history);
+  if(sd===0) return 0;
+  return (value-m)/sd;
+}
+function renderUnusualActivity(bars, li){
+  const el = document.getElementById('unusualActivity');
+  const badge = document.getElementById('symAnomalyBadge');
+  const lookback = 30;
+  if(li < 12){ el.innerHTML = '<div class="muted">Need at least ~12 bars for this (30+ gives a steadier baseline).</div>'; badge.innerHTML=''; return; }
+
+  const start = Math.max(0, li-lookback);
+  const volHist = bars.slice(start, li).map(b=>b.volume);
+  const chgHist = []; for(let j=Math.max(1,start); j<li; j++) chgHist.push((bars[j].close-bars[j-1].close)/bars[j-1].close*100);
+  const gapHist = []; for(let j=Math.max(1,start); j<li; j++) gapHist.push((bars[j].open-bars[j-1].close)/bars[j-1].close*100);
+
+  const todayVol = bars[li].volume;
+  const todayChg = (bars[li].close-bars[li-1].close)/bars[li-1].close*100;
+  const todayGap = (bars[li].open-bars[li-1].close)/bars[li-1].close*100;
+
+  const metrics = [
+    ['Volume', zscore(todayVol, volHist), `${todayVol.toLocaleString('en-IN')} shares`],
+    ['Price change', zscore(todayChg, chgHist), `${todayChg>=0?'+':''}${todayChg.toFixed(2)}%`],
+    ['Gap', zscore(todayGap, gapHist), `${todayGap>=0?'+':''}${todayGap.toFixed(2)}%`]
+  ].filter(([,z])=>z!=null);
+
+  if(!metrics.length){ el.innerHTML = '<div class="muted">Not enough history yet to establish this stock\'s normal range.</div>'; badge.innerHTML=''; return; }
+
+  let worst = 0;
+  const rows = metrics.map(([label,z,val])=>{
+    const az = Math.abs(z);
+    if(az>worst) worst=az;
+    const level = az>=3 ? 'Unusual' : az>=2 ? 'Borderline' : 'Normal';
+    const cls = az>=3 ? 'r' : az>=2 ? 'y' : 'n';
+    return `<div class="kv"><span>${label}</span><span class="tag ${cls}">${level} (z=${z.toFixed(1)}) — ${val}</span></div>`;
+  }).join('');
+  el.innerHTML = rows;
+
+  if(worst>=3) badge.innerHTML = '<span class="tag r">⚠️ Unusual activity today</span>';
+  else if(worst>=2) badge.innerHTML = '<span class="tag y">Borderline unusual activity</span>';
+  else badge.innerHTML = '';
 }
 
 /* ============ WHAT CHANGED TODAY (auto, no click needed) ============ */
@@ -1408,7 +1443,6 @@ document.getElementById('instrLookupBtn').addEventListener('click', async ()=>{
       const chipsEl = document.getElementById('expiryChips');
       if(expiries.length){
         chipsEl.innerHTML = 'Available expiries: ' + expiries.map(d=>`<button class="ghost expiryChip" data-d="${d}" style="padding:4px 10px;font-size:12px;margin:2px">${d}</button>`).join('');
-        document.querySelectorAll('.expiryChip').forEach(c=> c.addEventListener('click', ()=>{ document.getElementById('upstoxExpiry').value = c.dataset.d; }));
       } else {
         chipsEl.innerHTML = '<span class="muted">No F&O expiries found for this symbol — it may not trade in derivatives.</span>';
       }
