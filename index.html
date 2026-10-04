@@ -1,0 +1,1972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Marak Stock Intelligence</title>
+<link rel="manifest" href="manifest.json">
+<style>
+  :root{
+    --navy:#0b1e3a; --navy2:#132a4d; --blue:#2563eb; --blue2:#3b82f6;
+    --orange:#f97316; --green:#16a34a; --red:#dc2626; --amber:#d97706;
+    --bg:#0b1120; --card:#111a2e; --card2:#162138; --border:#22304d;
+    --text:#e6ecf5; --sub:#93a3bf;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif;}
+  h1,h2,h3,.brand{font-family:Poppins,Inter,sans-serif;}
+  header{display:flex;align-items:center;gap:10px;padding:14px 16px;background:linear-gradient(90deg,var(--navy),var(--navy2));position:sticky;top:0;z-index:10;border-bottom:1px solid var(--border)}
+  .logo{width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,var(--blue),var(--orange));display:flex;align-items:center;justify-content:center;font-weight:700}
+  .brand{font-weight:700;font-size:17px}
+  .brand small{display:block;font-size:10px;color:var(--sub);font-weight:400}
+  main{max-width:1100px;margin:0 auto;padding:14px}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px}
+  .card h3{margin:0 0 10px;font-size:14px;color:var(--sub);text-transform:uppercase;letter-spacing:.05em}
+  input,select,textarea,button{font-family:inherit;font-size:14px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text);padding:8px 10px}
+  button{cursor:pointer;background:var(--blue);border:none;color:#fff;font-weight:600}
+  button.secondary{background:var(--card2);border:1px solid var(--border);color:var(--text)}
+  button.ghost{background:transparent;border:1px solid var(--border);color:var(--sub)}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  @media(max-width:640px){.grid3{grid-template-columns:1fr 1fr}}
+  .tag{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:20px;font-size:12px;font-weight:600}
+  .tag.g{background:#0f2e1c;color:#4ade80}
+  .tag.y{background:#332705;color:#fbbf24}
+  .tag.r{background:#3a0e12;color:#f87171}
+  .tag.n{background:#1a2540;color:var(--sub)}
+  .bar{height:8px;border-radius:5px;background:var(--card2);overflow:hidden;flex:1}
+  .bar > div{height:100%;border-radius:5px}
+  .dnaRow{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:13px}
+  .dnaRow .label{width:100px;color:var(--sub)}
+  .dnaRow .val{width:34px;text-align:right;font-weight:600}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--border)}
+  th:first-child,td:first-child{text-align:left}
+  th{color:var(--sub);font-weight:600}
+  .tl{border-left:2px solid var(--border);margin-left:6px;padding-left:14px}
+  .tlItem{position:relative;padding-bottom:12px;font-size:13px}
+  .tlItem:before{content:'';position:absolute;left:-19px;top:4px;width:8px;height:8px;border-radius:50%;background:var(--blue)}
+  .tlTime{color:var(--sub);font-size:11px;display:block}
+  .muted{color:var(--sub);font-size:12.5px}
+  .statusline{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;padding:6px 0;border-bottom:1px dashed var(--border);font-size:13px}
+  .price{font-size:26px;font-weight:700}
+  .chg{font-size:14px;font-weight:600}
+  .up{color:#4ade80}.down{color:#f87171}
+  #chat{max-height:260px;overflow-y:auto;margin-bottom:8px}
+  .msg{padding:8px 10px;border-radius:8px;margin-bottom:6px;font-size:13.5px;white-space:pre-wrap}
+  .msg.user{background:var(--card2);margin-left:20%}
+  .msg.ai{background:#0e1a30;margin-right:5%;border:1px solid var(--border)}
+  .flexend{display:flex;gap:8px;justify-content:flex-end}
+  .tabbar{display:flex;gap:6px;margin-bottom:12px;overflow-x:auto}
+  .tabbtn{padding:8px 12px;border-radius:8px;background:var(--card2);border:1px solid var(--border);color:var(--sub);white-space:nowrap;font-weight:600;font-size:13px}
+  .tabbtn.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+  .tabpane{display:none}
+  .tabpane.active{display:block}
+  canvas{width:100%;height:220px;background:var(--card2);border-radius:8px}
+  .settingsGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .footNote{font-size:11.5px;color:var(--sub);margin-top:6px}
+  .kv{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px dashed var(--border)}
+  .kv span:last-child{font-weight:600}
+  #lockScreen{display:none;position:fixed;inset:0;z-index:9999;background:var(--bg);align-items:center;justify-content:center;flex-direction:column;gap:12px;padding:24px;text-align:center}
+  html.locked #lockScreen{display:flex}
+  html.locked body{overflow:hidden}
+</style>
+<script>try{if(localStorage.getItem("msi_lock"))document.documentElement.classList.add("locked");}catch(e){}</script>
+</head>
+<body>
+<div id="lockScreen">
+  <div class="logo" style="width:56px;height:56px;font-size:20px">Mi</div>
+  <div class="brand" style="font-size:20px">Marak Stock Intelligence</div>
+  <div class="muted">Enter your password to continue</div>
+  <input id="lockInput" type="password" autocomplete="current-password" placeholder="Password / PIN" style="width:100%;max-width:280px;text-align:center;font-size:18px">
+  <button id="lockUnlockBtn" style="width:100%;max-width:280px">Unlock</button>
+  <button id="lockFingerBtn" class="secondary" style="width:100%;max-width:280px;display:none">Use fingerprint</button>
+  <div id="lockMsg" style="color:#f87171;font-size:13px;min-height:18px"></div>
+  <button id="lockForgotBtn" class="ghost" style="font-size:12px;padding:4px 10px">Forgot password? Reset app</button>
+</div>
+
+<div id="settingsModal" style="display:none;position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.65);align-items:flex-start;justify-content:center;padding:70px 14px 14px;overflow:auto">
+  <div class="card" id="lockCard" style="width:100%;max-width:520px;margin:0">
+    <div class="statusline" style="border:none;padding:0"><b style="font-size:16px">Settings</b><button class="ghost" id="settingsClose" style="padding:4px 10px">✕</button></div>
+    <h3 style="margin-top:10px">App lock</h3>
+    <div id="lockStatus" class="muted" style="margin-bottom:8px"></div>
+    <div id="lockSetup" class="row">
+      <input id="lockNew" type="password" placeholder="New password / PIN (min 4)" style="flex:1;min-width:160px">
+      <input id="lockNew2" type="password" placeholder="Repeat" style="flex:1;min-width:120px">
+      <button id="lockEnableBtn">Enable lock</button>
+    </div>
+    <div id="lockManage" class="row" style="display:none">
+      <button class="secondary" id="lockBioBtn">Enable fingerprint</button>
+      <input id="lockCur" type="password" placeholder="Current password" style="flex:1;min-width:140px">
+      <button class="secondary" id="lockOffBtn">Turn off lock</button>
+    </div>
+    <div class="footNote">Locks the app screen on this device each time it opens and after 2 minutes in the background. Fingerprint uses your phone's own lock. This is a screen lock, not data encryption.</div>
+  </div>
+</div>
+<header>
+  <div class="logo">Mi</div>
+  <div class="brand">Marak Stock Intelligence<small>Marak Innovation · offline-first</small></div>
+  <div style="margin-left:auto;display:flex;gap:8px">
+    <button class="ghost" id="settingsBtn" style="padding:7px 10px;font-size:16px" aria-label="Settings">⚙</button>
+    <button class="ghost" id="shareBtn" style="padding:7px 10px;font-size:12px;display:none">Share</button>
+    <button class="secondary" id="installBtn" style="padding:7px 10px;font-size:12px;display:none">Install</button>
+  </div>
+</header>
+<div id="updateBanner" style="display:none;background:var(--orange);color:#1a1a1a;padding:8px 16px;text-align:center;font-size:13px;font-weight:600">
+  A new version is available. <button id="updateBtn" style="background:#1a1a1a;color:#fff;border:none;padding:4px 12px;border-radius:6px;margin-left:8px;font-weight:600">Reload to update</button>
+</div>
+<div id="indexTicker" style="display:flex;gap:18px;padding:8px 16px;background:var(--card2);border-bottom:1px solid var(--border);font-size:13px;align-items:center;overflow-x:auto">
+  <span class="muted">Indices: —</span>
+</div>
+
+<main>
+
+  <!-- DATA / SEARCH -->
+  <div class="card">
+    <h3>Load stock data</h3>
+    <div class="row">
+      <input type="file" id="csvFile" accept=".csv" multiple>
+      <select id="symbolSelect" style="min-width:160px"><option value="">Select loaded symbol...</option></select>
+      <button class="secondary" id="clearDataBtn">Clear all data</button>
+    </div>
+    <div class="footNote">Upload NSE Bhavcopy or any OHLCV CSV (Date, Open, High, Low, Close, Volume — headers auto-detected; DELIV_PER column used if present). You can upload several days' files at once — they merge per symbol.</div>
+    <div id="loadStatus" class="footNote"></div>
+  </div>
+
+  <div id="app" style="display:none">
+
+    <div class="card">
+      <div class="statusline" style="border:none;padding:0">
+        <div>
+          <div id="symTitle" style="font-weight:700;font-size:18px"></div>
+          <div class="price" id="symPrice"></div>
+          <div class="chg" id="symChg"></div>
+          <div id="symAnomalyBadge" style="margin-top:4px"></div>
+        </div>
+        <div style="text-align:right">
+          <div class="muted" id="symDate"></div>
+          <div class="muted" id="symBars"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tabbar">
+      <button class="tabbtn active" data-tab="structure">Structure</button>
+      <button class="tabbtn" data-tab="smartmoney">Smart Money</button>
+      <button class="tabbtn" data-tab="ichi">Ichimoku / BB</button>
+      <button class="tabbtn" data-tab="sector">Sector & RS</button>
+      <button class="tabbtn" data-tab="scen">Scenarios</button>
+      <button class="tabbtn" data-tab="dna">Stock DNA</button>
+      <button class="tabbtn" data-tab="psych">Psychology</button>
+      <button class="tabbtn" data-tab="why">Why is it moving</button>
+      <button class="tabbtn" data-tab="pattern">Pattern history</button>
+      <button class="tabbtn" data-tab="options">Options / Institutional</button>
+      <button class="tabbtn" data-tab="ai">Ask AI</button>
+    </div>
+
+    <!-- STRUCTURE -->
+    <div class="tabpane active" id="tab-structure">
+      <div class="card" style="border-color:var(--orange)">
+        <h3>What changed today</h3>
+        <div id="whatChangedToday"></div>
+      </div>
+      <div class="card">
+        <h3>Unusual activity</h3>
+        <div id="unusualActivity"></div>
+        <div class="footNote">Flags today's volume, price move and gap against this stock's own recent range (z-score vs the last 30 sessions) — not a flat threshold applied to every stock alike. |z| above 3 is flagged as unusual, 2 to 3 as borderline.</div>
+      </div>
+      <div class="card">
+        <h3>Price & market structure</h3>
+        <canvas id="priceChart"></canvas>
+        <div class="grid3" style="margin-top:12px">
+          <div class="kv"><span>Trend regime</span><span id="s_trend">-</span></div>
+          <div class="kv"><span>ADX (14)</span><span id="s_adx">-</span></div>
+          <div class="kv"><span>ATR (14)</span><span id="s_atr">-</span></div>
+          <div class="kv"><span>ATR %</span><span id="s_atrp">-</span></div>
+          <div class="kv"><span>RSI (14)</span><span id="s_rsi">-</span></div>
+          <div class="kv"><span>VWAP (20d)</span><span id="s_vwap">-</span></div>
+          <div class="kv"><span>Volume vs 20d avg</span><span id="s_volx">-</span></div>
+          <div class="kv"><span>OBV slope (10d)</span><span id="s_obv">-</span></div>
+          <div class="kv"><span>CMF (20)</span><span id="s_cmf">-</span></div>
+          <div class="kv"><span>Nearest resistance</span><span id="s_res">-</span></div>
+          <div class="kv"><span>Nearest support</span><span id="s_sup">-</span></div>
+          <div class="kv"><span>Breakout/breakdown</span><span id="s_break">-</span></div>
+          <div class="kv"><span>Gap (last session)</span><span id="s_gap">-</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Market structure (swings, BOS/CHOCH)</h3>
+        <div id="marketStructurePanel"></div>
+        <div class="footNote">Inferred from swing highs/lows in the loaded bars — reads as price action, not a signal.</div>
+      </div>
+      <div class="card">
+        <h3>Liquidity map</h3>
+        <div id="liquidityMap" style="font-family:'Courier New',monospace;font-size:12.5px"></div>
+      </div>
+      <div class="card">
+        <h3>Regime</h3>
+        <div id="regimeCurrent" style="margin-bottom:10px"></div>
+        <div id="regimeHistory" style="font-family:'Courier New',monospace;font-size:12.5px"></div>
+        <div class="footNote">Mechanical classification from trend/ADX/volatility/volume rules — not a forecast of what comes next.</div>
+      </div>
+    </div>
+
+    <!-- SMART MONEY -->
+    <div class="tabpane" id="tab-smartmoney">
+      <div class="card">
+        <h3>Smart money / accumulation read</h3>
+        <div id="smartMoneyPanel"></div>
+        <div class="footNote">This is an inference engine built only from price, volume and delivery% — it has no direct knowledge of who is actually trading. Treat "accumulation"/"distribution" as a pattern label, not a confirmed institutional footprint.</div>
+      </div>
+    </div>
+
+
+    <!-- ICHIMOKU / BOLLINGER / VOLUME -->
+    <div class="tabpane" id="tab-ichi">
+      <div class="card" style="border-color:var(--orange)">
+        <h3>Combined outcome (daily chart)</h3>
+        <div id="ichiOutcome"></div>
+      </div>
+      <div class="card">
+        <h3>Chart</h3>
+        <div class="row" style="margin-bottom:8px;font-size:13px">
+          <label><input type="checkbox" id="togIchi" checked style="width:auto"> Ichimoku</label>
+          <label><input type="checkbox" id="togBB" checked style="width:auto"> Bollinger Bands</label>
+        </div>
+        <canvas id="ichiChart" style="height:300px"></canvas>
+        <div class="footNote">Last ~100 daily candles. Cloud green = Span A above Span B, red = below. Blue lines = Bollinger Bands (20, 2). Red line = Tenkan, light-blue line = Kijun. Bars at the bottom = volume.</div>
+      </div>
+      <div class="card"><h3>Ichimoku (9 / 26 / 52)</h3><div id="ichiPanel"></div></div>
+      <div class="card"><h3>Bollinger Bands (20, 2)</h3><div id="bbPanel"></div></div>
+      <div class="card"><h3>Volume</h3><div id="volPanel"></div>
+        <div class="footNote">This outcome is built only from the loaded daily price and volume data. It ignores news, your entry price, stop-loss and position size, and the thresholds are fixed judgment calls that haven't been tested to predict profit. Not investment advice.</div>
+      </div>
+    </div>
+
+    <!-- SECTOR & RELATIVE STRENGTH -->
+    <div class="tabpane" id="tab-sector">
+      <div class="card"><h3>Context chain</h3><div id="sectorChain"></div></div>
+      <div class="card"><h3>Relative strength</h3><div id="sectorRS"></div>
+        <div class="footNote">Sector = average of your loaded same-sector symbols (excluding this one). Breadth = loaded symbols only. Load more symbols for a better read. For multi-day NIFTY comparison, upload a CSV named NIFTY; otherwise only the live 1-day ticker is used.</div></div>
+    </div>
+
+    <!-- SCENARIOS -->
+    <div class="tabpane" id="tab-scen">
+      <div class="card"><h3>Scenarios</h3><div id="scenPanel"></div>
+        <button class="secondary" id="scenAiBtn" style="margin-top:8px">AI review</button>
+        <div id="scenAiOut" style="margin-top:8px;font-size:13px;line-height:1.5;white-space:pre-wrap"></div>
+        <div class="footNote">Conditions are ticked from calculated data. The count shows how much evidence supports each path today. It is not a probability.</div></div>
+    </div>
+
+    <!-- STOCK DNA -->
+    <div class="tabpane" id="tab-dna">
+      <div class="card">
+        <h3 id="dnaTitle">Stock DNA</h3>
+        <div id="dnaBars" style="font-family:'Courier New',monospace"></div>
+        <div class="footNote">Each bar is computed from the loaded price/volume data. Risk measures how bumpy daily price swings are, not overall investment safety.</div>
+      </div>
+      <div class="card">
+        <h3>Rule-based read (not investment advice)</h3>
+        <div id="recoPanel"></div>
+        <div class="footNote">This is a mechanical weighted average of the DNA bars above — not a prediction, not personalized advice, and it knows nothing about your cost basis, risk tolerance, or portfolio. Treat it as a summary of what the computed technicals say, not an instruction.</div>
+      </div>
+    </div>
+
+    <!-- PSYCHOLOGY -->
+    <div class="tabpane" id="tab-psych">
+      <div class="card">
+        <h3>Market psychology</h3>
+        <div id="psychGrid"></div>
+        <div class="card" style="margin-top:10px;background:var(--card2)">
+          <div id="psychSummary" style="font-size:13.5px;line-height:1.5"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WHY IS IT MOVING -->
+    <div class="tabpane" id="tab-why">
+      <div class="card">
+        <h3>Why is it moving</h3>
+        <div class="row">
+          <select id="whyDateSelect"></select>
+          <button id="whyBtn">Investigate this session</button>
+        </div>
+        <div class="tl" id="whyTimeline" style="margin-top:14px"></div>
+        <div class="footNote">News, FII/DII and options triggers only appear if the Upstox module is connected (Options tab). Otherwise this is a price/volume/technical forensic trail only.</div>
+      </div>
+    </div>
+
+    <!-- PATTERN HISTORY -->
+    <div class="tabpane" id="tab-pattern">
+      <div class="card">
+        <h3>Historical pattern engine</h3>
+        <div class="row">
+          <label class="muted">Forward window (days) <input id="fwdDays" type="number" value="5" min="1" max="30" style="width:60px"></label>
+          <button id="patternBtn">Find similar historical setups</button>
+        </div>
+        <div id="patternResult" style="margin-top:12px"></div>
+        <div class="footNote">This is descriptive historical analysis of your own loaded data, not a prediction or guaranteed probability.</div>
+      </div>
+    </div>
+
+    <!-- OPTIONS / INSTITUTIONAL (UPSTOX) -->
+    <div class="tabpane" id="tab-options">
+      <div class="card">
+        <h3>Find instrument key</h3>
+        <div class="row">
+          <input id="instrLookupSymbol" placeholder="Trading symbol, e.g. JUBLFOOD" style="flex:1;min-width:160px">
+          <button id="instrLookupBtn">Search</button>
+        </div>
+        <div id="instrLookupStatus" class="footNote"></div>
+        <div id="instrLookupResults" style="margin-top:8px"></div>
+        <div class="footNote">Downloads Upstox's public NSE instrument file once per session (~60MB) and searches it locally — unreliable on mobile browsers (large file can freeze the tab). For known/common stocks, it's faster to just ask Claude for the ISIN and build the key yourself as <code>NSE_EQ|&lt;ISIN&gt;</code>.</div>
+        <div class="footNote">Available F&O expiries for a symbol: NSE publishes these; ask Claude if you're unsure of the exact date, or check the Upstox app's option chain screen for that stock.</div>
+      </div>
+      <div class="card">
+        <h3>Upstox connection</h3>
+        <div class="settingsGrid">
+          <input id="upstoxToken" placeholder="Upstox Access Token">
+          <input id="upstoxInstrumentKey" placeholder="Instrument key (e.g. NSE_EQ|INE002A01018)">
+        </div>
+        <div class="row" style="margin-top:8px">
+          <input id="upstoxExpiry" placeholder="Expiry date (YYYY-MM-DD)" style="width:180px">
+          <button id="upstoxFetchBtn">Fetch option chain</button>
+          <button class="secondary" id="upstoxSaveBtn">Save token</button>
+        </div>
+        <div id="expiryChips" style="margin-top:8px"></div>
+        <div class="footNote">You said you don't have Upstox API access yet — register at <b>upstox.com/developer</b>, create an app, complete OAuth login to get an access token (valid ~1 trading day), and find the instrument key for the stock in Upstox's published instrument master (NSE.json). This panel is fully wired once you paste a token.</div>
+        <div id="upstoxStatus" class="footNote"></div>
+      </div>
+      <div class="card">
+        <h3>Options snapshot</h3>
+        <div id="optionsGrid" class="grid3"></div>
+        <div id="optionsTableWrap" style="margin-top:10px;max-height:280px;overflow:auto"></div>
+      </div>
+      <div class="card">
+        <h3>FII / DII activity</h3>
+        <div class="muted">NSE's own data is blocked by a login/cookie wall no proxy can complete. This instead reads Upstox's public FII/DII page — no login needed there, but it works by parsing their webpage, so it can break if Upstox redesigns that page. Cash-market segment only.</div>
+        <div class="row" style="margin-top:8px">
+          <button class="secondary" id="fiiFetchBtn">Fetch FII/DII (via Upstox page)</button>
+        </div>
+        <div id="fiiResult" style="margin-top:8px"></div>
+      </div>
+    </div>
+
+    <!-- AI ASSISTANT -->
+    <div class="tabpane" id="tab-ai">
+      <div class="card">
+        <h3>Ask AI about this stock</h3>
+        <div class="settingsGrid">
+          <input id="groqKey" placeholder="Groq API key (kept local, used client-side)">
+          <select id="groqModel">
+            <option value="openai/gpt-oss-120b">openai/gpt-oss-120b (best quality)</option>
+            <option value="llama-3.1-8b-instant">llama-3.1-8b-instant (fastest)</option>
+            <option value="openai/gpt-oss-20b">openai/gpt-oss-20b</option>
+          </select>
+        </div>
+        <div id="chat" style="margin-top:10px"></div>
+        <div class="row">
+          <input id="chatInput" placeholder='e.g. "Are institutions accumulating?"' style="flex:1">
+          <button id="chatSendBtn">Ask</button>
+        </div>
+        <div class="footNote">The AI answers only from the computed structure/DNA/smart-money/options data currently loaded for this stock. It does not browse the web, and if data is missing (for example no Upstox connection) it should say so rather than invent numbers.</div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+/* ============ PWA: real service worker (proper auto-update), install prompt, share ============ */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').then((reg) => {
+    reg.addEventListener('updatefound', () => {
+      const newWorker = reg.installing;
+      newWorker.addEventListener('statechange', () => {
+        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+          // A new version has been installed and is waiting — show the update banner.
+          document.getElementById('updateBanner').style.display = 'block';
+        }
+      });
+    });
+  }).catch(()=>{ /* running from file:// or SW unsupported — app still works, just no offline caching/auto-update */ });
+
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshing) return; refreshing = true; window.location.reload();
+  });
+}
+document.getElementById('updateBtn')?.addEventListener('click', () => {
+  navigator.serviceWorker.getRegistration().then((reg) => {
+    if (reg && reg.waiting) reg.waiting.postMessage('SKIP_WAITING');
+    else window.location.reload();
+  });
+});
+
+// Install prompt (Android/Chrome). iOS Safari has no beforeinstallprompt — users add via Share > Add to Home Screen instead.
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  document.getElementById('installBtn').style.display = 'inline-block';
+});
+document.getElementById('installBtn').addEventListener('click', async () => {
+  if (!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+  document.getElementById('installBtn').style.display = 'none';
+});
+window.addEventListener('appinstalled', () => { document.getElementById('installBtn').style.display = 'none'; });
+
+// Share button
+if (navigator.share) {
+  const shareBtn = document.getElementById('shareBtn');
+  shareBtn.style.display = 'inline-block';
+  shareBtn.addEventListener('click', async () => {
+    let text = 'Marak Stock Intelligence — offline-first stock analysis PWA.';
+    if (currentSymbol && DB[currentSymbol]) {
+      const bars = DB[currentSymbol].bars; const last = bars[bars.length-1];
+      text = `${currentSymbol}: ₹${last.close} as of ${last.date} — via Marak Stock Intelligence.`;
+    }
+    try{ await navigator.share({ title: 'Marak Stock Intelligence', text, url: window.location.href }); }catch(e){ /* user cancelled share sheet */ }
+  });
+}
+
+/* ============ STATE ============ */
+let DB = JSON.parse(localStorage.getItem('msi_db') || '{}'); // { SYMBOL: { bars:[{date,open,high,low,close,volume,delivPer}], upstox:{} } }
+let currentSymbol = null;
+let lastSignal = null;
+let lastIchi = null;
+let lastIchiOutcome = null;
+
+function saveDB(){ localStorage.setItem('msi_db', JSON.stringify(DB)); }
+
+/* ============ CSV INGEST ============ */
+const HEADER_MAP = {
+  date:['date','timestamp','tradedate'], open:['open'], high:['high'], low:['low'],
+  close:['close','last','closepr'], volume:['volume','tottrdqty','vol','shtraded'],
+  symbol:['symbol','sym','ticker'], deliv:['deliv_per','delivpercentage','%dlyqttotrdqty']
+};
+function findCol(headers, keys){
+  const norm = headers.map(h=>h.trim().toLowerCase().replace(/[^a-z0-9%]/g,''));
+  for(const k of keys){ const i = norm.indexOf(k.replace(/[^a-z0-9%]/g,'')); if(i>=0) return i; }
+  // fuzzy contains
+  for(let i=0;i<norm.length;i++){ for(const k of keys){ if(norm[i].includes(k.replace(/[^a-z0-9%]/g,''))) return i; } }
+  return -1;
+}
+function splitCSVLine(line){
+  // Quote-aware split: commas inside quoted fields (e.g. Indian-style "9,45,073") are kept, not treated as delimiters.
+  const result = []; let cur = '', inQuotes = false;
+  for(let i=0;i<line.length;i++){
+    const c = line[i];
+    if(c === '"'){ inQuotes = !inQuotes; continue; }
+    if(c === ',' && !inQuotes){ result.push(cur); cur=''; } else { cur += c; }
+  }
+  result.push(cur);
+  return result;
+}
+function parseCSV(text){
+  text = text.replace(/^\uFEFF/,''); // strip BOM
+  const lines = text.split(/\r?\n/).filter(l=>l.trim().length);
+  if(!lines.length) return [];
+  const headers = splitCSVLine(lines[0]).map(h=>h.trim());
+  const col = {
+    date: findCol(headers, HEADER_MAP.date), open: findCol(headers, HEADER_MAP.open),
+    high: findCol(headers, HEADER_MAP.high), low: findCol(headers, HEADER_MAP.low),
+    close: findCol(headers, HEADER_MAP.close), volume: findCol(headers, HEADER_MAP.volume),
+    symbol: findCol(headers, HEADER_MAP.symbol), deliv: findCol(headers, HEADER_MAP.deliv)
+  };
+  if(col.date<0||col.close<0) return [];
+  const rows = [];
+  for(let i=1;i<lines.length;i++){
+    const cells = splitCSVLine(lines[i]).map(c=>c.trim());
+    if(cells.length<2) continue;
+    const num = v => { const n = parseFloat(String(v).replace(/,/g,'')); return isNaN(n)?null:n; };
+    const sym = col.symbol>=0 ? cells[col.symbol].toUpperCase() : null;
+    let d = cells[col.date];
+    // normalize date to YYYY-MM-DD
+    let dd = normalizeDate(d);
+    rows.push({
+      symbol: sym, date: dd,
+      open: num(cells[col.open]), high: num(cells[col.high]), low: num(cells[col.low]),
+      close: num(cells[col.close]), volume: num(cells[col.volume]) || 0,
+      delivPer: col.deliv>=0 ? num(cells[col.deliv]) : null
+    });
+  }
+  return rows.filter(r=>r.date && r.close!=null);
+}
+function normalizeDate(d){
+  if(!d) return null;
+  d = d.trim();
+  let m;
+  if(m = d.match(/^(\d{4})-(\d{2})-(\d{2})/)) return `${m[1]}-${m[2]}-${m[3]}`;
+  if(m = d.match(/^(\d{2})-([A-Za-z]{3})-(\d{4})/)){ // 01-Jan-2026
+    const months={Jan:'01',Feb:'02',Mar:'03',Apr:'04',May:'05',Jun:'06',Jul:'07',Aug:'08',Sep:'09',Oct:'10',Nov:'11',Dec:'12'};
+    return `${m[3]}-${months[m[2]]}-${m[1]}`;
+  }
+  if(m = d.match(/^(\d{2})[\/\-](\d{2})[\/\-](\d{4})/)) return `${m[3]}-${m[2]}-${m[1]}`;
+  return d;
+}
+
+document.getElementById('csvFile').addEventListener('change', async (e)=>{
+  const files = Array.from(e.target.files);
+  let totalRows = 0, symbolsTouched = new Set();
+  for(const file of files){
+    const text = await file.text();
+    const rows = parseCSV(text);
+    for(const r of rows){
+      const sym = r.symbol || file.name.replace(/\.csv$/i,'').toUpperCase();
+      if(!DB[sym]) DB[sym] = { bars:[], upstox:{} };
+      // upsert by date
+      const idx = DB[sym].bars.findIndex(b=>b.date===r.date);
+      const bar = {date:r.date, open:r.open, high:r.high, low:r.low, close:r.close, volume:r.volume, delivPer:r.delivPer};
+      if(idx>=0) DB[sym].bars[idx]=bar; else DB[sym].bars.push(bar);
+      symbolsTouched.add(sym); totalRows++;
+    }
+  }
+  Object.keys(DB).forEach(s=> DB[s].bars.sort((a,b)=>a.date.localeCompare(b.date)) );
+  saveDB();
+  document.getElementById('loadStatus').textContent = `Loaded ${totalRows} rows across ${symbolsTouched.size} symbol(s).`;
+  refreshSymbolSelect();
+});
+
+document.getElementById('clearDataBtn').addEventListener('click', ()=>{
+  if(!confirm('Clear all locally stored stock data?')) return;
+  DB = {}; saveDB(); refreshSymbolSelect();
+  document.getElementById('app').style.display='none';
+});
+
+function refreshSymbolSelect(){
+  const sel = document.getElementById('symbolSelect');
+  sel.innerHTML = '<option value="">Select loaded symbol...</option>' +
+    Object.keys(DB).sort().map(s=>`<option value="${s}">${s} (${DB[s].bars.length} bars)</option>`).join('');
+}
+document.getElementById('symbolSelect').addEventListener('change', e=>{
+  if(e.target.value){ currentSymbol = e.target.value; loadSymbol(currentSymbol); }
+});
+refreshSymbolSelect();
+
+/* ============ INDICATOR ENGINE ============ */
+const IND = {
+  sma(arr,p){ return arr.map((_,i)=> i<p-1?null: arr.slice(i-p+1,i+1).reduce((a,b)=>a+b,0)/p ); },
+  ema(arr,p){ const k=2/(p+1); let out=[]; let prev=null;
+    arr.forEach((v,i)=>{ if(v==null){out.push(null);return;} if(prev==null){ if(i>=p-1){ const seed=arr.slice(i-p+1,i+1).reduce((a,b)=>a+b,0)/p; prev=seed; out.push(seed);} else out.push(null); } else { prev = v*k + prev*(1-k); out.push(prev);} });
+    return out; },
+  rsi(closes,p=14){ let gains=[],losses=[]; for(let i=1;i<closes.length;i++){ const ch=closes[i]-closes[i-1]; gains.push(Math.max(ch,0)); losses.push(Math.max(-ch,0)); }
+    let out=[null]; let avgG=null,avgL=null;
+    for(let i=0;i<gains.length;i++){ if(i<p-1){out.push(null);continue;} if(i===p-1){ avgG=gains.slice(0,p).reduce((a,b)=>a+b,0)/p; avgL=losses.slice(0,p).reduce((a,b)=>a+b,0)/p; } else { avgG=(avgG*(p-1)+gains[i])/p; avgL=(avgL*(p-1)+losses[i])/p; }
+      const rs = avgL===0? 100 : avgG/avgL; out.push(avgL===0?100:100-100/(1+rs)); }
+    return out; },
+  atr(bars,p=14){ let tr=[null]; for(let i=1;i<bars.length;i++){ const h=bars[i].high,l=bars[i].low,pc=bars[i-1].close;
+      tr.push(Math.max(h-l, Math.abs(h-pc), Math.abs(l-pc))); }
+    return IND.wilder(tr,p); },
+  wilder(arr,p){ let out=[]; let prev=null; for(let i=0;i<arr.length;i++){ if(arr[i]==null){out.push(null);continue;} if(prev==null){ if(i>=p){ const seed=arr.slice(i-p+1,i+1).filter(v=>v!=null).reduce((a,b)=>a+b,0)/p; prev=seed; out.push(seed);} else out.push(null);} else { prev=(prev*(p-1)+arr[i])/p; out.push(prev);} } return out; },
+  adx(bars,p=14){ let plusDM=[0],minusDM=[0],tr=[0];
+    for(let i=1;i<bars.length;i++){ const upMove=bars[i].high-bars[i-1].high, downMove=bars[i-1].low-bars[i].low;
+      plusDM.push(upMove>downMove&&upMove>0?upMove:0); minusDM.push(downMove>upMove&&downMove>0?downMove:0);
+      tr.push(Math.max(bars[i].high-bars[i].low, Math.abs(bars[i].high-bars[i-1].close), Math.abs(bars[i].low-bars[i-1].close))); }
+    const atr=IND.wilder(tr,p), pDM=IND.wilder(plusDM,p), mDM=IND.wilder(minusDM,p);
+    let plusDI=[],minusDI=[],dx=[];
+    for(let i=0;i<bars.length;i++){ if(atr[i]==null||!atr[i]){plusDI.push(null);minusDI.push(null);dx.push(null);continue;}
+      const pdi=100*pDM[i]/atr[i], mdi=100*mDM[i]/atr[i]; plusDI.push(pdi); minusDI.push(mdi);
+      dx.push(100*Math.abs(pdi-mdi)/((pdi+mdi)||1)); }
+    return { adx: IND.wilder(dx,p), plusDI, minusDI }; },
+  obv(bars){ let out=[0]; for(let i=1;i<bars.length;i++){ const ch=bars[i].close-bars[i-1].close;
+      out.push(out[i-1] + (ch>0?bars[i].volume:ch<0?-bars[i].volume:0)); } return out; },
+  cmf(bars,p=20){ let mfv=bars.map(b=>{ const range=(b.high-b.low)||1e-9; const mult=((b.close-b.low)-(b.high-b.close))/range; return mult*b.volume; });
+    let out=[]; for(let i=0;i<bars.length;i++){ if(i<p-1){out.push(null);continue;}
+      const sumMfv=mfv.slice(i-p+1,i+1).reduce((a,b)=>a+b,0), sumVol=bars.slice(i-p+1,i+1).reduce((a,b)=>a+b.volume,0);
+      out.push(sumVol? sumMfv/sumVol : 0);} return out; },
+  vwap(bars,p=20){ let out=[]; for(let i=0;i<bars.length;i++){ if(i<p-1){out.push(null);continue;}
+      let sumPV=0,sumV=0; for(let j=i-p+1;j<=i;j++){ const tp=(bars[j].high+bars[j].low+bars[j].close)/3; sumPV+=tp*bars[j].volume; sumV+=bars[j].volume; }
+      out.push(sumV? sumPV/sumV : null);} return out; }
+};
+
+function computeAll(bars){
+  const closes = bars.map(b=>b.close);
+  const ema20 = IND.ema(closes,20), ema50 = IND.ema(closes,50), ema200 = IND.ema(closes,200);
+  const rsi = IND.rsi(closes,14);
+  const atr = IND.atr(bars,14);
+  const { adx, plusDI, minusDI } = IND.adx(bars,14);
+  const obv = IND.obv(bars);
+  const cmf = IND.cmf(bars,20);
+  const vwap = IND.vwap(bars,20);
+  const vol20 = IND.sma(bars.map(b=>b.volume),20);
+  return {closes, ema20, ema50, ema200, rsi, atr, adx, plusDI, minusDI, obv, cmf, vwap, vol20};
+}
+
+function swingLevels(bars, lookback=60, strength=3){
+  const n = bars.length; const start = Math.max(0, n-lookback);
+  let highs=[], lows=[];
+  for(let i=start+strength;i<n-strength;i++){
+    const seg = bars.slice(i-strength,i+strength+1);
+    if(bars[i].high === Math.max(...seg.map(b=>b.high))) highs.push(bars[i].high);
+    if(bars[i].low === Math.min(...seg.map(b=>b.low))) lows.push(bars[i].low);
+  }
+  return {highs, lows};
+}
+
+// Ordered swing points (for HH/HL/LH/LL, BOS/CHOCH) — walks the whole loaded history, not just a recent window.
+function getSwingPoints(bars, strength=3){
+  const points = [];
+  for(let i=strength;i<bars.length-strength;i++){
+    const seg = bars.slice(i-strength,i+strength+1);
+    if(bars[i].high === Math.max(...seg.map(b=>b.high))) points.push({i, price: bars[i].high, type:'high', date: bars[i].date});
+    if(bars[i].low === Math.min(...seg.map(b=>b.low))) points.push({i, price: bars[i].low, type:'low', date: bars[i].date});
+  }
+  return points.sort((a,b)=>a.i-b.i);
+}
+
+/* ============ LOAD SYMBOL / RENDER ============ */
+function loadSymbol(sym){
+  const rec = DB[sym];
+  if(!rec || rec.bars.length<5){ alert('Not enough bars for this symbol (need at least 5).'); return; }
+  document.getElementById('app').style.display='block';
+  const bars = rec.bars;
+  const last = bars[bars.length-1], prev = bars[bars.length-2];
+  document.getElementById('symTitle').textContent = sym;
+  document.getElementById('symPrice').textContent = '₹' + last.close.toLocaleString('en-IN');
+  const chg = last.close-prev.close, chgP = (chg/prev.close*100);
+  const chgEl = document.getElementById('symChg');
+  chgEl.textContent = `${chg>=0?'+':''}${chg.toFixed(2)} (${chgP.toFixed(2)}%)`;
+  chgEl.className = 'chg ' + (chg>=0?'up':'down');
+  document.getElementById('symDate').textContent = last.date;
+  document.getElementById('symBars').textContent = bars.length + ' bars loaded';
+
+  const calc = computeAll(bars);
+  const {highs,lows} = swingLevels(bars);
+  const li = bars.length-1;
+
+  // STRUCTURE tab
+  const trendRegime = (()=>{
+    const e20=calc.ema20[li], e50=calc.ema50[li], e200=calc.ema200[li], adxV=calc.adx[li];
+    if(e50==null) return 'Insufficient data';
+    if(e200!=null && e20>e50 && e50>e200 && adxV>20) return '🟢 Bullish (trending)';
+    if(e200!=null && e20<e50 && e50<e200 && adxV>20) return '🔴 Bearish (trending)';
+    if(adxV!=null && adxV<18) return '🟡 Sideways / range-bound';
+    return e20>e50 ? '🟢 Bullish (mild)' : '🔴 Bearish (mild)';
+  })();
+  const volX = calc.vol20[li] ? (last.volume/calc.vol20[li]) : null;
+  const nearestRes = highs.filter(h=>h>last.close).sort((a,b)=>a-b)[0];
+  const nearestSup = lows.filter(l=>l<last.close).sort((a,b)=>b-a)[0];
+  const breakout = nearestRes==null || (bars.length>20 && last.close > Math.max(...bars.slice(-21,-1).map(b=>b.high)) && volX>1.3);
+  const breakdown = bars.length>20 && last.close < Math.min(...bars.slice(-21,-1).map(b=>b.low)) && volX>1.3;
+  const gap = prev ? ((last.open-prev.close)/prev.close*100) : null;
+
+  setText('s_trend', trendRegime);
+  setText('s_adx', fmt(calc.adx[li]));
+  setText('s_atr', fmt(calc.atr[li]));
+  setText('s_atrp', calc.atr[li]!=null ? (calc.atr[li]/last.close*100).toFixed(2)+'%' : '-');
+  setText('s_rsi', fmt(calc.rsi[li]));
+  setText('s_vwap', calc.vwap[li]!=null ? '₹'+calc.vwap[li].toFixed(2) : '-');
+  setText('s_volx', volX!=null ? volX.toFixed(2)+'x' : '-');
+  setText('s_obv', obvSlopeLabel(calc.obv));
+  setText('s_cmf', fmt(calc.cmf[li],3));
+  setText('s_res', nearestRes ? '₹'+nearestRes.toFixed(2) : '-');
+  setText('s_sup', nearestSup ? '₹'+nearestSup.toFixed(2) : '-');
+  setText('s_break', breakout ? '🟢 Breakout' : breakdown ? '🔴 Breakdown' : '— none');
+  setText('s_gap', gap!=null ? `${gap>=0?'Gap up':'Gap down'} ${Math.abs(gap).toFixed(2)}%` : '-');
+
+  drawChart(bars.slice(-90));
+
+  // PSYCHOLOGY
+  renderPsychology(bars, calc, li, volX, trendRegime);
+
+  // NEW: Smart Money, Market Structure, Liquidity Map, Regime, What Changed Today
+  const smCtx = renderSmartMoney(bars, calc, li, volX);
+  const msCtx = renderMarketStructure(bars, calc, li);
+  const regimeNow = classifyRegime(bars, calc, li);
+  renderDNA(sym, bars, calc, li, volX, gap, {sm: smCtx, ms: msCtx, regime: regimeNow});
+  renderLiquidityMap(bars, li);
+  renderIchiBB(bars, calc, li, volX);
+  renderRegimeHistory(bars, calc);
+  renderWhatChangedToday(bars, calc, li, volX, nearestRes, nearestSup, breakout, breakdown);
+  renderUnusualActivity(bars, li);
+  renderSectorRS(sym, bars, calc, li);
+  renderScenarios(sym, bars, calc, li, {sm: smCtx, ms: msCtx, regime: regimeNow});
+
+  // WHY tab date list
+  const whySel = document.getElementById('whyDateSelect');
+  whySel.innerHTML = bars.slice(-60).reverse().map(b=>`<option value="${b.date}">${b.date}</option>`).join('');
+
+  currentSymbol = sym;
+}
+function setText(id,v){ document.getElementById(id).textContent = v; }
+function fmt(v,dp=2){ return v==null||isNaN(v) ? '-' : v.toFixed(dp); }
+function obvSlopeLabel(obv){
+  const n=obv.length; if(n<11) return '-';
+  const slope = obv[n-1]-obv[n-11];
+  return slope>0 ? '🟢 Rising' : slope<0 ? '🔴 Falling' : '🟡 Flat';
+}
+
+/* ============ CHART (simple canvas candlesticks) ============ */
+function drawChart(bars){
+  const canvas = document.getElementById('priceChart');
+  const dpr = window.devicePixelRatio||1;
+  const w = canvas.clientWidth, h = 220;
+  canvas.width = w*dpr; canvas.height = h*dpr;
+  const ctx = canvas.getContext('2d'); ctx.scale(dpr,dpr);
+  ctx.clearRect(0,0,w,h);
+  if(!bars.length) return;
+  const max = Math.max(...bars.map(b=>b.high)), min = Math.min(...bars.map(b=>b.low));
+  const pad = (max-min)*0.08 || 1;
+  const yScale = v => h - ((v-(min-pad))/((max+pad)-(min-pad))) * h;
+  const cw = w/bars.length;
+  bars.forEach((b,i)=>{
+    const x = i*cw + cw/2;
+    const up = b.close>=b.open;
+    ctx.strokeStyle = ctx.fillStyle = up ? '#4ade80' : '#f87171';
+    ctx.beginPath(); ctx.moveTo(x, yScale(b.high)); ctx.lineTo(x, yScale(b.low)); ctx.stroke();
+    const bodyTop = yScale(Math.max(b.open,b.close)), bodyBot = yScale(Math.min(b.open,b.close));
+    ctx.fillRect(x-cw*0.35, bodyTop, cw*0.7, Math.max(1,bodyBot-bodyTop));
+  });
+}
+
+/* ============ STOCK DNA ============ */
+function renderDNA(sym, bars, calc, li, volX, gap, ctx){
+  document.getElementById('dnaTitle').textContent = sym + ' — Stock DNA';
+  const clamp = v => Math.max(0,Math.min(100,v));
+  const trendScore = clamp(50 + (calc.ema20[li]>calc.ema50[li]?20:-20) + (calc.adx[li]!=null?Math.min(30,calc.adx[li]):0));
+  const momentumScore = clamp(calc.rsi[li]!=null ? calc.rsi[li] : 50);
+  const volumeScore = clamp(volX!=null ? 50+Math.min(50,(volX-1)*50) : 50);
+  const obvSlope = calc.obv[calc.obv.length-1]-calc.obv[Math.max(0,calc.obv.length-11)];
+  const accumScore = clamp(50 + (obvSlope>0?20:-20) + (calc.cmf[li]!=null? calc.cmf[li]*200 : 0));
+  const atrp = calc.atr[li]!=null ? calc.atr[li]/bars[li].close*100 : null;
+  const riskScore = atrp!=null ? clamp(100 - atrp*10) : null;
+
+  const rows = [
+    ['TREND', trendScore, 0.25], ['MOMENTUM', momentumScore, 0.20], ['VOLUME', volumeScore, 0.15],
+    ['ACCUMULATION', accumScore, 0.25], ['RISK', riskScore, 0.15]
+  ];
+  // ASCII block-bar rendering, matching the original spec's look, e.g. "TREND ████████░░ 82"
+  document.getElementById('dnaBars').innerHTML = rows.map(([label,val])=>{
+    const padLabel = label.padEnd(13,' ');
+    if(val==null) return `<div class="dnaRow"><span style="white-space:pre">${padLabel}</span><span class="muted">░░░░░░░░░░  n/a</span></div>`;
+    const filled = Math.round(val/10);
+    const bar = '█'.repeat(filled) + '░'.repeat(10-filled);
+    const color = val>=66?'#4ade80':val>=40?'#fbbf24':'#f87171';
+    return `<div class="dnaRow"><span style="white-space:pre">${padLabel}</span><span style="color:${color};letter-spacing:-1px">${bar}</span><span style="margin-left:8px">${Math.round(val)}</span></div>`;
+  }).join('');
+
+  renderRecommendation(rows, ctx);
+}
+
+/* ============ RULE-BASED READ (weighted composite of DNA scores — not advice, just arithmetic) ============ */
+function renderRecommendation(rows, ctx){
+  const scored = rows.filter(([,val]) => val != null);
+  const totalWeight = scored.reduce((s,[,,w]) => s+w, 0);
+  const composite = totalWeight ? scored.reduce((s,[,val,w]) => s+val*w, 0) / totalWeight : null;
+  const missing = rows.filter(([,val]) => val == null).map(([label]) => label);
+  const panel = document.getElementById('recoPanel');
+  if(composite == null){ panel.innerHTML = '<div class="muted">Not enough data to compute a read yet.</div>'; return; }
+
+  let band, cls;
+  if(composite >= 65){ band = 'Bullish read'; cls = 'g'; }
+  else if(composite >= 55){ band = 'Mildly bullish'; cls = 'g'; }
+  else if(composite > 45){ band = 'Neutral / mixed'; cls = 'y'; }
+  else if(composite > 35){ band = 'Mildly bearish'; cls = 'r'; }
+  else { band = 'Bearish read'; cls = 'r'; }
+
+  const sortedFactors = scored.slice().sort((a,b) => b[1]-a[1]);
+  const strongest = sortedFactors[0], weakest = sortedFactors[sortedFactors.length-1];
+
+  // ---- Buy / Hold / Sell signal (fixed rules, shown with reasons) ----
+  const regime = ctx && ctx.regime;
+  const sm = ctx && ctx.sm;
+  const ms = ctx && ctx.ms;
+  const bullRegime = ['Accumulation','Bull trend','Breakout'].includes(regime);
+  const bearRegime = ['Breakdown','Distribution'].includes(regime);
+  const failedBO = !!(sm && sm.failedBreakout);
+  const distHigh = !!(sm && sm.possibleDistribution);
+  const bearChoch = !!(ms && ms.chochDir === 'bearish');
+
+  const sellReasons = [];
+  if(composite < 35) sellReasons.push(`Composite score is low (${Math.round(composite)}/100)`);
+  if(bearRegime) sellReasons.push(`Regime is ${regime}`);
+  if(bearChoch) sellReasons.push('Bearish CHOCH: structure broke against the uptrend');
+
+  const buyChecks = [
+    [composite >= 65, `Composite score ${Math.round(composite)}/100 (needs 65+)`],
+    [bullRegime, `Regime: ${regime || 'not enough bars'} (needs Accumulation, Bull trend or Breakout)`],
+    [!failedBO, failedBO ? 'Failed breakout flagged' : 'No failed breakout'],
+    [!distHigh, distHigh ? 'Possible distribution at highs flagged' : 'No distribution-at-highs flag'],
+    [!bearChoch, bearChoch ? 'Bearish CHOCH present' : 'No bearish CHOCH']
+  ];
+  let signal, sigCls, reasonLines;
+  if(sellReasons.length){
+    signal = 'SELL / AVOID'; sigCls = 'r';
+    reasonLines = sellReasons.map(t => `✗ ${t}`);
+  } else if(buyChecks.every(([ok]) => ok)){
+    signal = 'BUY'; sigCls = 'g';
+    reasonLines = buyChecks.map(([,t]) => `✓ ${t}`);
+  } else {
+    signal = 'HOLD / WAIT'; sigCls = 'y';
+    reasonLines = buyChecks.map(([ok,t]) => `${ok?'✓':'✗'} ${t}`);
+  }
+  lastSignal = { signal, composite: Math.round(composite), regime: regime || null, reasons: reasonLines };
+
+  panel.innerHTML = `
+    <div class="statusline"><span style="font-size:15px;font-weight:700">Signal</span><span class="tag ${sigCls}" style="font-size:15px">${signal}</span></div>
+    <div style="margin:8px 0 12px;font-size:13px;line-height:1.6">${reasonLines.join('<br>')}</div>
+    <div class="statusline"><span style="font-size:15px;font-weight:700">Composite score</span><span class="tag ${cls}" style="font-size:14px">${band} — ${Math.round(composite)}/100</span></div>
+    <div class="kv"><span>Strongest factor</span><span>${strongest[0]} (${Math.round(strongest[1])})</span></div>
+    <div class="kv"><span>Weakest factor</span><span>${weakest[0]} (${Math.round(weakest[1])})</span></div>
+    ${missing.length ? `<div class="kv"><span>Excluded (no data)</span><span>${missing.join(', ')}</span></div>` : ''}
+    <div class="footNote">SELL fires if any sell condition is true. BUY needs every check ticked. Anything else is HOLD / WAIT. Thresholds are fixed judgment calls, not proven to predict profit, and the signal ignores news, your entry price, stop-loss and position size.</div>
+  `;
+  addWhyButton(panel);
+}
+
+/* ============ PSYCHOLOGY GRID ============ */
+function renderPsychology(bars, calc, li, volX, trendRegime){
+  const upstoxConnected = !!getGlobalUpstoxToken();
+  const items = [
+    ['Trend', trendRegime.includes('Bullish')?'g':trendRegime.includes('Bearish')?'r':'y', trendRegime.replace(/🟢|🔴|🟡/g,'').trim()],
+    ['Volume', volX>1.2?'g':volX<0.8?'r':'y', volX!=null? (volX*100).toFixed(0)+'% of 20d avg' : 'n/a'],
+    ['Delivery', bars[li].delivPer!=null ? (bars[li].delivPer>60?'g':bars[li].delivPer<30?'r':'y') : 'n', bars[li].delivPer!=null? bars[li].delivPer+'%' : 'no DELIV_PER column'],
+    ['Momentum', calc.rsi[li]>55?'g':calc.rsi[li]<45?'r':'y', 'RSI '+fmt(calc.rsi[li])],
+    ['Institutional Flow', 'n', upstoxConnected? 'from Upstox OI' : 'connect Upstox'],
+    ['Options Position', 'n', upstoxConnected? 'from Upstox OI' : 'connect Upstox'],
+    ['News Sentiment', 'n', 'no news source connected']
+  ];
+  document.getElementById('psychGrid').innerHTML = items.map(([label,cls,val])=>
+    `<div class="statusline"><span>${label}</span><span class="tag ${cls}">${val}</span></div>`).join('');
+  const summary = `Price is showing a ${trendRegime.replace(/🟢|🔴|🟡/g,'').trim().toLowerCase()} structure with ${volX>1.2?'increasing':'unremarkable'} participation. Momentum is ${calc.rsi[li]>55?'positive':calc.rsi[li]<45?'weak':'neutral'}. Institutional flow, options positioning and news sentiment need the Upstox connection (and a news source) to populate — currently ${upstoxConnected?'connected':'not connected'}.`;
+  document.getElementById('psychSummary').textContent = summary;
+}
+
+/* ============ SMART MONEY / ACCUMULATION ENGINE ============ */
+function renderSmartMoney(bars, calc, li, volX){
+  const panel = document.getElementById('smartMoneyPanel');
+  if(li<20 || calc.vol20[li]==null){ panel.innerHTML = '<div class="muted">Need at least ~20 bars for this read.</div>'; return null; }
+  const priceUp = bars[li].close > bars[li-1].close;
+  const volHigh = volX!=null && volX > 1.2;
+  const volLow = volX!=null && volX < 0.8;
+
+  let quadrant, quadCls;
+  if(priceUp && volHigh){ quadrant = 'ACCUMULATION (price up, volume up)'; quadCls='g'; }
+  else if(priceUp && volLow){ quadrant = 'Rally lacks volume support'; quadCls='y'; }
+  else if(!priceUp && volHigh){ quadrant = 'DISTRIBUTION (price down, volume up)'; quadCls='r'; }
+  else if(!priceUp && volLow){ quadrant = 'Decline lacks volume — possible exhaustion'; quadCls='y'; }
+  else { quadrant = 'Neutral'; quadCls='n'; }
+
+  // Delivery % trend (needs DELIV_PER column)
+  const delivSeries = bars.slice(Math.max(0,li-9), li+1).map(b=>b.delivPer).filter(v=>v!=null);
+  let delivTrend = 'n/a (no DELIV_PER column)';
+  if(delivSeries.length>=3){
+    const chg = delivSeries[delivSeries.length-1] - delivSeries[0];
+    delivTrend = `${chg>=0?'↑ rising':'↓ falling'} (${delivSeries[0].toFixed(0)}% → ${delivSeries[delivSeries.length-1].toFixed(0)}%)`;
+  }
+
+  const cmfTrend = (li>=25 && calc.cmf[li]!=null && calc.cmf[li-5]!=null) ? (calc.cmf[li]>calc.cmf[li-5]?'Rising':'Falling') : 'n/a';
+  const obvTrend = obvSlopeLabel(calc.obv);
+
+  // Breakout volume confirmation / absorption / distribution-at-highs / failed breakout
+  const recentHigh20 = Math.max(...bars.slice(Math.max(0,li-20),li).map(b=>b.high));
+  const breakoutConfirmed = bars[li].close > recentHigh20 && volHigh;
+  const chgP = (bars[li].close-bars[li-1].close)/bars[li-1].close*100;
+  const range = bars[li].high-bars[li].low;
+  const possibleAbsorption = volHigh && Math.abs(chgP) < 0.5 && range>0;
+  const near20High = bars[li].close > recentHigh20*0.97;
+  const possibleDistribution = near20High && cmfTrend==='Falling' && obvTrend.includes('Falling');
+  const failedBreakout = li>=2 && bars[li-1].close > Math.max(...bars.slice(Math.max(0,li-21),li-1).map(b=>b.high)) && bars[li].close < bars[li-1].close && bars[li].close < Math.max(...bars.slice(Math.max(0,li-21),li-1).map(b=>b.high));
+
+  // Evidence strength: how many sub-signals agree with the quadrant's direction
+  const isBullishCase = quadrant.startsWith('ACCUMULATION') || quadrant.startsWith('Rally');
+  const isBearishCase = quadrant.startsWith('DISTRIBUTION') || quadrant.startsWith('Decline');
+  let agree=0, total=0;
+  if(isBullishCase || isBearishCase){
+    const checks = [
+      volHigh || volLow,
+      cmfTrend==='Rising' ? isBullishCase : cmfTrend==='Falling' ? isBearishCase : null,
+      obvTrend.includes('Rising') ? isBullishCase : obvTrend.includes('Falling') ? isBearishCase : null,
+      delivSeries.length>=3 ? (delivTrend.startsWith('↑') ? isBullishCase : isBearishCase) : null,
+      breakoutConfirmed ? isBullishCase : null,
+      !failedBreakout
+    ].filter(v=>v!==null);
+    total = checks.length; agree = checks.filter(Boolean).length;
+  }
+  const evidence = total? Math.round(agree/total*100) : null;
+
+  panel.innerHTML = `
+    <div class="statusline"><span style="font-weight:700;font-size:15px">Smart Money Status</span><span class="tag ${quadCls}">${quadrant}</span></div>
+    <div class="kv"><span>Price</span><span>${priceUp?'↑':'↓'} ${chgP>=0?'+':''}${chgP.toFixed(2)}%</span></div>
+    <div class="kv"><span>Volume vs 20d avg</span><span>${volX!=null?volX.toFixed(2)+'x':'-'}</span></div>
+    <div class="kv"><span>Delivery % trend</span><span>${delivTrend}</span></div>
+    <div class="kv"><span>CMF trend</span><span>${cmfTrend}</span></div>
+    <div class="kv"><span>OBV trend</span><span>${obvTrend}</span></div>
+    <div class="kv"><span>Breakout volume confirmation</span><span>${breakoutConfirmed?'🟢 Yes':'— none'}</span></div>
+    <div class="kv"><span>Possible absorption</span><span>${possibleAbsorption?'🟡 Flagged (high vol, small move)':'— none'}</span></div>
+    <div class="kv"><span>Possible distribution at highs</span><span>${possibleDistribution?'🔴 Flagged':'— none'}</span></div>
+    <div class="kv"><span>Failed breakout</span><span>${failedBreakout?'🔴 Flagged':'— none'}</span></div>
+    ${evidence!=null ? `<div class="kv"><span style="font-weight:700">Evidence strength</span><span style="font-weight:700">${evidence}/100</span></div>` : ''}
+  `;
+  return { quadrant, failedBreakout, possibleDistribution, evidence };
+}
+
+/* ============ MARKET STRUCTURE ENGINE (HH/HL/LH/LL, BOS/CHOCH, equal highs/lows) ============ */
+function renderMarketStructure(bars, calc, li){
+  const panel = document.getElementById('marketStructurePanel');
+  const points = getSwingPoints(bars, 3);
+  if(points.length<4){ panel.innerHTML = '<div class="muted">Not enough swing points yet — need more bars.</div>'; return null; }
+
+  const swingHighs = points.filter(p=>p.type==='high');
+  const swingLows = points.filter(p=>p.type==='low');
+  const lastHighs = swingHighs.slice(-2), lastLows = swingLows.slice(-2);
+
+  let structureLabel = [];
+  if(lastHighs.length===2) structureLabel.push(lastHighs[1].price > lastHighs[0].price ? 'HH' : 'LH');
+  if(lastLows.length===2) structureLabel.push(lastLows[1].price > lastLows[0].price ? 'HL' : 'LL');
+
+  const isUptrend = structureLabel.includes('HH') && structureLabel.includes('HL');
+  const isDowntrend = structureLabel.includes('LH') && structureLabel.includes('LL');
+
+  const lastSwingHigh = swingHighs[swingHighs.length-1];
+  const lastSwingLow = swingLows[swingLows.length-1];
+  const close = bars[li].close;
+
+  let bos = null, choch = null, chochDir = null;
+  if(isUptrend && lastSwingHigh && close > lastSwingHigh.price) bos = `BOS (bullish) — closed above swing high ₹${lastSwingHigh.price.toFixed(2)} from ${lastSwingHigh.date}`;
+  if(isUptrend && lastSwingLow && close < lastSwingLow.price) chochDir = 'bearish';
+  if(isUptrend && lastSwingLow && close < lastSwingLow.price) choch = `CHOCH (possible bearish reversal) — closed below swing low ₹${lastSwingLow.price.toFixed(2)} from ${lastSwingLow.date}`;
+  if(isDowntrend && lastSwingLow && close < lastSwingLow.price) bos = `BOS (bearish) — closed below swing low ₹${lastSwingLow.price.toFixed(2)} from ${lastSwingLow.date}`;
+  if(isDowntrend && lastSwingHigh && close > lastSwingHigh.price) chochDir = 'bullish';
+  if(isDowntrend && lastSwingHigh && close > lastSwingHigh.price) choch = `CHOCH (possible bullish reversal) — closed above swing high ₹${lastSwingHigh.price.toFixed(2)} from ${lastSwingHigh.date}`;
+
+  // Equal highs / equal lows (liquidity pools) — last 3 of each, within 0.3% tolerance
+  const tol = 0.003;
+  const eqHighs = swingHighs.slice(-3);
+  const equalHighs = eqHighs.length>=2 && Math.abs(eqHighs[eqHighs.length-1].price - eqHighs[eqHighs.length-2].price) / eqHighs[eqHighs.length-2].price < tol;
+  const eqLows = swingLows.slice(-3);
+  const equalLows = eqLows.length>=2 && Math.abs(eqLows[eqLows.length-1].price - eqLows[eqLows.length-2].price) / eqLows[eqLows.length-2].price < tol;
+
+  const prevDay = bars[li-1];
+  const last5 = bars.slice(Math.max(0,li-5), li);
+  const prevWeekHigh = last5.length? Math.max(...last5.map(b=>b.high)) : null;
+  const prevWeekLow = last5.length? Math.min(...last5.map(b=>b.low)) : null;
+  const yr = bars.slice(Math.max(0,li-251), li+1);
+  const high52 = Math.max(...yr.map(b=>b.high));
+  const low52 = Math.min(...yr.map(b=>b.low));
+
+  panel.innerHTML = `
+    <div class="kv"><span>Structure</span><span>${structureLabel.join(' / ') || 'forming'} ${isUptrend?'(uptrend)':isDowntrend?'(downtrend)':''}</span></div>
+    ${bos ? `<div class="kv"><span style="color:#4ade80">BOS</span><span>${bos}</span></div>` : ''}
+    ${choch ? `<div class="kv"><span style="color:#f87171">CHOCH</span><span>${choch}</span></div>` : ''}
+    ${equalHighs ? `<div class="kv"><span>Equal highs</span><span>🟡 Detected near ₹${eqHighs[eqHighs.length-1].price.toFixed(2)} (liquidity pool)</span></div>` : ''}
+    ${equalLows ? `<div class="kv"><span>Equal lows</span><span>🟡 Detected near ₹${eqLows[eqLows.length-1].price.toFixed(2)} (liquidity pool)</span></div>` : ''}
+    <div class="kv"><span>Previous day H/L</span><span>₹${prevDay.high.toFixed(2)} / ₹${prevDay.low.toFixed(2)}</span></div>
+    <div class="kv"><span>Previous week H/L (approx)</span><span>${prevWeekHigh?`₹${prevWeekHigh.toFixed(2)} / ₹${prevWeekLow.toFixed(2)}`:'-'}</span></div>
+    <div class="kv"><span>52-week H/L (from loaded data)</span><span>₹${high52.toFixed(2)} / ₹${low52.toFixed(2)}</span></div>
+  `;
+  return { chochDir, bos: !!bos };
+}
+
+/* ============ LIQUIDITY MAP ============ */
+function renderLiquidityMap(bars, li){
+  const panel = document.getElementById('liquidityMap');
+  const window_ = bars.slice(Math.max(0,li-251), li+1);
+  const close = bars[li].close;
+  const high52 = Math.max(...window_.map(b=>b.high));
+  const low52 = Math.min(...window_.map(b=>b.low));
+  const {highs, lows} = swingLevels(bars);
+  const resistance = highs.filter(h=>h>close).sort((a,b)=>a-b)[0];
+  const support = lows.filter(l=>l<close).sort((a,b)=>b-a)[0];
+
+  // Volume profile: bucket the window's bars by price, sum volume per bucket, use it to size each level's bar.
+  const bins = 20;
+  const lo = low52, hi = high52, span = (hi-lo)||1;
+  const buckets = new Array(bins).fill(0);
+  window_.forEach(b=>{
+    const mid = (b.high+b.low)/2;
+    const idx = Math.min(bins-1, Math.max(0, Math.floor((mid-lo)/span*bins)));
+    buckets[idx] += b.volume;
+  });
+  const maxBucket = Math.max(...buckets, 1);
+  const volAt = (price) => {
+    const idx = Math.min(bins-1, Math.max(0, Math.floor((price-lo)/span*bins)));
+    return buckets[idx];
+  };
+  const barFor = (price) => {
+    if(price==null) return '';
+    const w = Math.max(1, Math.round(volAt(price)/maxBucket*20));
+    return '█'.repeat(w);
+  };
+
+  const levels = [
+    ['52W HIGH', high52],
+    ['Resistance', resistance],
+    ['CURRENT', close],
+    ['Support', support],
+    ['52W LOW', low52]
+  ];
+  panel.innerHTML = levels.map(([label,price])=>{
+    if(price==null) return `<div>${label.padEnd(11,' ')} —</div>`;
+    const marker = label==='CURRENT' ? ' ←' : '';
+    return `<div>${label.padEnd(11,' ')} ₹${price.toFixed(2).padStart(9,' ')}  <span style="color:#3b82f6">${barFor(price)}</span>${marker}</div>`;
+  }).join('');
+
+  // Sweep detection: today's high/low pierced a level then closed back inside it.
+  const sweeps = [];
+  if(bars[li].high > high52 && bars[li].close < high52) sweeps.push('Swept 52W high and closed back below it — possible liquidity grab.');
+  if(bars[li].low < low52 && bars[li].close > low52) sweeps.push('Swept 52W low and closed back above it — possible liquidity grab.');
+  if(resistance && bars[li].high > resistance && bars[li].close < resistance) sweeps.push(`Swept resistance ₹${resistance.toFixed(2)} and closed back below it.`);
+  if(support && bars[li].low < support && bars[li].close > support) sweeps.push(`Swept support ₹${support.toFixed(2)} and closed back above it.`);
+  if(sweeps.length) panel.innerHTML += `<div style="margin-top:8px;color:#fbbf24">${sweeps.join('<br>')}</div>`;
+}
+
+/* ============ REGIME DETECTOR ============ */
+function classifyRegime(bars, calc, i){
+  if(i<50 || calc.adx[i]==null || calc.ema50[i]==null) return null;
+  const trendUp = calc.ema20[i] > calc.ema50[i];
+  const trendDown = calc.ema20[i] < calc.ema50[i];
+  const adxHigh = calc.adx[i] > 25, adxLow = calc.adx[i] < 18;
+  const vol20 = calc.vol20[i];
+  const volX = vol20 ? bars[i].volume/vol20 : 1;
+
+  // volatility percentile vs its own trailing history
+  const atrPctSeries = [];
+  for(let j=Math.max(0,i-60); j<=i; j++){ if(calc.atr[j]!=null) atrPctSeries.push(calc.atr[j]/bars[j].close); }
+  atrPctSeries.sort((a,b)=>a-b);
+  const curAtrPct = calc.atr[i]/bars[i].close;
+  const atrRank = atrPctSeries.length ? atrPctSeries.indexOf(curAtrPct)/atrPctSeries.length : 0.5;
+
+  const prior20High = Math.max(...bars.slice(Math.max(0,i-20),i).map(b=>b.high));
+  const prior20Low = Math.min(...bars.slice(Math.max(0,i-20),i).map(b=>b.low));
+  const breakout = bars[i].close > prior20High && volX>1.3;
+  const breakdown = bars[i].close < prior20Low && volX>1.3;
+
+  const obvSlope = calc.obv[i]-calc.obv[Math.max(0,i-10)];
+  const rangeNarrow = adxLow;
+
+  if(breakout) return 'Breakout';
+  if(breakdown) return 'Breakdown';
+  if(adxHigh && trendUp) return 'Bull trend';
+  if(adxHigh && trendDown) return 'Bear trend';
+  if(rangeNarrow && obvSlope>0 && calc.cmf[i]>0) return 'Accumulation';
+  if(rangeNarrow && obvSlope<0 && calc.cmf[i]<0) return 'Distribution';
+  if(atrRank>0.8) return 'High-volatility';
+  if(atrRank<0.2) return 'Low-volatility';
+  return 'Range';
+}
+function renderRegimeHistory(bars, calc){
+  const cur = classifyRegime(bars, calc, bars.length-1);
+  const curEl = document.getElementById('regimeCurrent');
+  curEl.innerHTML = cur ? `<span class="tag ${cur.includes('Bull')||cur==='Breakout'||cur==='Accumulation'?'g':cur.includes('Bear')||cur==='Breakdown'||cur==='Distribution'?'r':'y'}" style="font-size:14px">Current regime: ${cur}</span>` : '<span class="muted">Not enough bars yet (need 50+).</span>';
+
+  const transitions = [];
+  let lastRegime = null;
+  for(let i=50;i<bars.length;i++){
+    const r = classifyRegime(bars, calc, i);
+    if(r && r!==lastRegime){ transitions.push({date: bars[i].date, regime: r}); lastRegime = r; }
+  }
+  const recent = transitions.slice(-15);
+  document.getElementById('regimeHistory').innerHTML = recent.length ? recent.map((t,idx)=>
+    `${t.date} ─── ${t.regime}${idx===recent.length-1?' (current)':''}`
+  ).join('<br>') : '<span class="muted">No regime changes detected yet in the loaded history.</span>';
+}
+
+/* ============ UNUSUAL ACTIVITY (z-score vs this stock's own recent range) ============ */
+function mean(arr){ return arr.reduce((a,b)=>a+b,0)/arr.length; }
+function stddev(arr){ const m=mean(arr); return Math.sqrt(arr.reduce((a,b)=>a+(b-m)*(b-m),0)/arr.length); }
+function zscore(value, history){
+  if(history.length<10) return null; // too little history to call anything "unusual" with confidence
+  const m=mean(history), sd=stddev(history);
+  if(sd===0) return 0;
+  return (value-m)/sd;
+}
+function renderUnusualActivity(bars, li){
+  const el = document.getElementById('unusualActivity');
+  const badge = document.getElementById('symAnomalyBadge');
+  const lookback = 30;
+  if(li < 12){ el.innerHTML = '<div class="muted">Need at least ~12 bars for this (30+ gives a steadier baseline).</div>'; badge.innerHTML=''; return; }
+
+  const start = Math.max(0, li-lookback);
+  const volHist = bars.slice(start, li).map(b=>b.volume);
+  const chgHist = []; for(let j=Math.max(1,start); j<li; j++) chgHist.push((bars[j].close-bars[j-1].close)/bars[j-1].close*100);
+  const gapHist = []; for(let j=Math.max(1,start); j<li; j++) gapHist.push((bars[j].open-bars[j-1].close)/bars[j-1].close*100);
+
+  const todayVol = bars[li].volume;
+  const todayChg = (bars[li].close-bars[li-1].close)/bars[li-1].close*100;
+  const todayGap = (bars[li].open-bars[li-1].close)/bars[li-1].close*100;
+
+  const metrics = [
+    ['Volume', zscore(todayVol, volHist), `${todayVol.toLocaleString('en-IN')} shares`],
+    ['Price change', zscore(todayChg, chgHist), `${todayChg>=0?'+':''}${todayChg.toFixed(2)}%`],
+    ['Gap', zscore(todayGap, gapHist), `${todayGap>=0?'+':''}${todayGap.toFixed(2)}%`]
+  ].filter(([,z])=>z!=null);
+
+  if(!metrics.length){ el.innerHTML = '<div class="muted">Not enough history yet to establish this stock\'s normal range.</div>'; badge.innerHTML=''; return; }
+
+  let worst = 0;
+  const rows = metrics.map(([label,z,val])=>{
+    const az = Math.abs(z);
+    if(az>worst) worst=az;
+    const level = az>=3 ? 'Unusual' : az>=2 ? 'Borderline' : 'Normal';
+    const cls = az>=3 ? 'r' : az>=2 ? 'y' : 'n';
+    return `<div class="kv"><span>${label}</span><span class="tag ${cls}">${level} (z=${z.toFixed(1)}) — ${val}</span></div>`;
+  }).join('');
+  el.innerHTML = rows;
+
+  if(worst>=3) badge.innerHTML = '<span class="tag r">⚠️ Unusual activity today</span>';
+  else if(worst>=2) badge.innerHTML = '<span class="tag y">Borderline unusual activity</span>';
+  else badge.innerHTML = '';
+}
+
+/* ============ WHAT CHANGED TODAY (auto, no click needed) ============ */
+function renderWhatChangedToday(bars, calc, li, volX, nearestRes, nearestSup, breakout, breakdown){
+  const el = document.getElementById('whatChangedToday');
+  if(li<21){ el.innerHTML = '<div class="muted">Need a bit more history for this.</div>'; return; }
+  const items = [];
+  if(volX!=null && volX>2) items.push(['🔵', `Volume is ${volX.toFixed(1)}× the 20-day average.`]);
+  else if(volX!=null && volX>1.4) items.push(['🔵', `Volume expansion: ${volX.toFixed(1)}× the 20-day average.`]);
+  const dp = bars[li].delivPer, dpPrev = bars[li-1]?.delivPer;
+  if(dp!=null && dpPrev!=null && Math.abs(dp-dpPrev)>=8) items.push([dp>dpPrev?'🟢':'🔴', `Delivery ${dp>dpPrev?'increased':'decreased'} from ${dpPrev.toFixed(0)}% → ${dp.toFixed(0)}%.`]);
+  const range = bars[li].high-bars[li].low;
+  if(range>0 && (bars[li].close - bars[li].low)/range > 0.85) items.push(['🟢', "Closed near the day's high."]);
+  if(range>0 && (bars[li].high - bars[li].close)/range > 0.85) items.push(['🔴', "Closed near the day's low."]);
+  if(li>=25 && calc.cmf[li]!=null && calc.cmf[li-1]!=null && calc.cmf[li]>0 && calc.cmf[li-1]<=0) items.push(['🟢', 'CMF turned positive.']);
+  if(li>=25 && calc.cmf[li]!=null && calc.cmf[li-1]!=null && calc.cmf[li]<0 && calc.cmf[li-1]>=0) items.push(['🔴', 'CMF turned negative.']);
+  if(calc.rsi[li]!=null && calc.rsi[li-1]!=null){
+    if(calc.rsi[li-1]<60 && calc.rsi[li]>=60) items.push(['🟡', 'RSI crossed above 60.']);
+    if(calc.rsi[li-1]>40 && calc.rsi[li]<=40) items.push(['🟡', 'RSI crossed below 40.']);
+  }
+  if(calc.ema200[li]!=null) items.push([bars[li].close < calc.ema200[li] ? '🔴' : '🟢', `Price ${bars[li].close < calc.ema200[li] ? 'remains below' : 'remains above'} the 200-day EMA.`]);
+  if(breakout) items.push(['🟢', 'Breakout confirmed above recent range on volume.']);
+  if(breakdown) items.push(['🔴', 'Breakdown confirmed below recent range on volume.']);
+
+  el.innerHTML = items.length ? items.map(([icon,text])=>`<div style="margin-bottom:6px">${icon} ${text}</div>`).join('') : '<div class="muted">No unusual changes flagged for the latest session.</div>';
+}
+
+/* ============ ICHIMOKU + BOLLINGER + VOLUME (daily, from loaded CSV) ============ */
+function hhll(bars,i,p){
+  if(i<p-1) return null;
+  let h=-Infinity,l=Infinity;
+  for(let j=i-p+1;j<=i;j++){ if(bars[j].high>h) h=bars[j].high; if(bars[j].low<l) l=bars[j].low; }
+  return {h,l};
+}
+function computeIchimoku(bars){
+  const tenkan=[],kijun=[],spanA=[],spanB=[];
+  for(let i=0;i<bars.length;i++){
+    const t=hhll(bars,i,9), k=hhll(bars,i,26), b=hhll(bars,i,52);
+    const tv=t?(t.h+t.l)/2:null, kv=k?(k.h+k.l)/2:null;
+    tenkan.push(tv); kijun.push(kv);
+    spanA.push(tv!=null&&kv!=null?(tv+kv)/2:null);
+    spanB.push(b?(b.h+b.l)/2:null);
+  }
+  // The cloud drawn at bar i uses spans calculated 26 bars earlier.
+  const cloudA=bars.map((_,i)=>i>=26?spanA[i-26]:null);
+  const cloudB=bars.map((_,i)=>i>=26?spanB[i-26]:null);
+  return {tenkan,kijun,spanA,spanB,cloudA,cloudB};
+}
+function computeBollinger(bars,p=20,k=2){
+  const mid=[],upper=[],lower=[],pctB=[],bw=[];
+  for(let i=0;i<bars.length;i++){
+    if(i<p-1){ mid.push(null);upper.push(null);lower.push(null);pctB.push(null);bw.push(null); continue; }
+    const seg=bars.slice(i-p+1,i+1).map(b=>b.close);
+    const m=seg.reduce((a,b)=>a+b,0)/p;
+    const sd=Math.sqrt(seg.reduce((a,b)=>a+(b-m)*(b-m),0)/p);
+    mid.push(m); upper.push(m+k*sd); lower.push(m-k*sd);
+    pctB.push(sd>0?(bars[i].close-(m-k*sd))/(2*k*sd):0.5);
+    bw.push(m?(2*k*sd)/m:null);
+  }
+  return {mid,upper,lower,pctB,bw};
+}
+function ichiLines(lines){
+  const icon={g:'🟢',r:'🔴',y:'🟡',n:'⚪'};
+  return lines.map(([c,t])=>`<div style="margin-bottom:6px;font-size:13.5px">${icon[c]||''} ${t}</div>`).join('');
+}
+function renderIchiBB(bars, calc, li, volX){
+  const ich=computeIchimoku(bars), bb=computeBollinger(bars);
+  lastIchi={bars,ich,bb};
+  const close=bars[li].close;
+  const modules=[]; // {name, score, max}
+
+  /* ---- Ichimoku ---- */
+  const iLines=[]; let iScore=0, iMax=0;
+  const tk=ich.tenkan[li], kj=ich.kijun[li], cA=ich.cloudA[li], cB=ich.cloudB[li];
+  if(cA!=null && cB!=null){
+    const top=Math.max(cA,cB), bot=Math.min(cA,cB);
+    iMax++;
+    if(close>top){ iScore++; iLines.push(['g','Price is above the cloud (bullish).']); }
+    else if(close<bot){ iScore--; iLines.push(['r','Price is below the cloud (bearish).']); }
+    else iLines.push(['y','Price is inside the cloud, so there is no clear trend.']);
+  } else {
+    iLines.push(['n',`Current cloud needs about 78 bars of data (you have ${bars.length}), so cloud position is skipped. Load 6 months or more for the full read.`]);
+  }
+  if(tk!=null && kj!=null){
+    iMax++;
+    if(tk>kj){ iScore++; iLines.push(['g','Tenkan is above Kijun (short-term momentum up).']); }
+    else if(tk<kj){ iScore--; iLines.push(['r','Tenkan is below Kijun (short-term momentum down).']); }
+    else iLines.push(['y','Tenkan equals Kijun (flat).']);
+    for(let j=li;j>=Math.max(1,li-4);j--){
+      if(ich.tenkan[j-1]!=null && ich.kijun[j-1]!=null && ich.tenkan[j]!=null && ich.kijun[j]!=null){
+        if(ich.tenkan[j-1]<=ich.kijun[j-1] && ich.tenkan[j]>ich.kijun[j]){ iLines.push(['g',`Bullish Tenkan/Kijun cross on ${bars[j].date}.`]); break; }
+        if(ich.tenkan[j-1]>=ich.kijun[j-1] && ich.tenkan[j]<ich.kijun[j]){ iLines.push(['r',`Bearish Tenkan/Kijun cross on ${bars[j].date}.`]); break; }
+      }
+    }
+    iMax++;
+    if(close>kj){ iScore++; iLines.push(['g',`Price is above Kijun (₹${kj.toFixed(2)}).`]); }
+    else { iScore--; iLines.push(['r',`Price is below Kijun (₹${kj.toFixed(2)}).`]); }
+  } else {
+    iLines.push(['n','Tenkan/Kijun need at least 26 bars.']);
+  }
+  if(li>=26){
+    iMax++;
+    if(close>bars[li-26].close){ iScore++; iLines.push(['g','Chikou (lagging line) is above the price from 26 bars ago.']); }
+    else { iScore--; iLines.push(['r','Chikou (lagging line) is below the price from 26 bars ago.']); }
+  }
+  if(ich.spanA[li]!=null && ich.spanB[li]!=null){
+    iMax++;
+    if(ich.spanA[li]>ich.spanB[li]){ iScore++; iLines.push(['g','Future cloud (26 bars ahead) is bullish.']); }
+    else { iScore--; iLines.push(['r','Future cloud (26 bars ahead) is bearish.']); }
+  }
+  if(iMax>0) modules.push({name:'Ichimoku', score:iScore, max:iMax});
+
+  /* ---- Bollinger ---- */
+  const bLines=[]; let bScore=0, bMax=0;
+  const m=bb.mid[li], up=bb.upper[li], lo=bb.lower[li], pb=bb.pctB[li], w=bb.bw[li];
+  if(m!=null){
+    bMax++;
+    if(close>m){ bScore++; bLines.push(['g',`Price is above the middle band (₹${m.toFixed(2)}).`]); }
+    else { bScore--; bLines.push(['r',`Price is below the middle band (₹${m.toFixed(2)}).`]); }
+    if(li>=24 && bb.mid[li-5]!=null){
+      bMax++;
+      if(m>bb.mid[li-5]){ bScore++; bLines.push(['g','Middle band is rising (20-day average trending up).']); }
+      else { bScore--; bLines.push(['r','Middle band is falling (20-day average trending down).']); }
+    }
+    bMax++;
+    if(pb>0.8){ bScore++; bLines.push(['g',`Price is near the upper band (%B ${pb.toFixed(2)}), which shows strength.`]); }
+    else if(pb<0.2){ bScore--; bLines.push(['r',`Price is near the lower band (%B ${pb.toFixed(2)}), which shows weakness.`]); }
+    else bLines.push(['y',`Price is mid-range inside the bands (%B ${pb.toFixed(2)}).`]);
+    bLines.push(['n',`Bands: upper ₹${up.toFixed(2)}, lower ₹${lo.toFixed(2)}.`]);
+    const bwHist=bb.bw.slice(Math.max(0,li-119),li+1).filter(v=>v!=null);
+    if(bwHist.length>=30){
+      const rank=bwHist.filter(v=>v<=w).length/bwHist.length;
+      if(rank<=0.2) bLines.push(['y','Bands are squeezed (unusually narrow). A bigger move may be coming, but the squeeze does not say which direction.']);
+      else if(rank>=0.8) bLines.push(['y','Bands are wide (high volatility), so moves may already be stretched.']);
+    }
+    const rsi=calc.rsi[li];
+    if(pb>1 && rsi>70) bLines.push(['r','Price closed outside the upper band with RSI above 70, so a pullback is more likely than a fresh leg up.']);
+    if(pb<0 && rsi<30) bLines.push(['y','Price closed outside the lower band with RSI below 30, so an oversold bounce is possible.']);
+    modules.push({name:'Bollinger', score:bScore, max:bMax});
+  } else {
+    bLines.push(['n','Bollinger Bands need at least 20 bars.']);
+  }
+
+  /* ---- Volume ---- */
+  const vLines=[]; let vScore=0, vMax=0;
+  if(li>=20){
+    let upV=0, dnV=0;
+    for(let j=li-9;j<=li;j++){ if(j<1) continue; if(bars[j].close>bars[j-1].close) upV+=bars[j].volume; else if(bars[j].close<bars[j-1].close) dnV+=bars[j].volume; }
+    if(upV+dnV>0){
+      vMax++;
+      const ratio=dnV>0?upV/dnV:99;
+      if(ratio>1.2){ vScore++; vLines.push(['g',`Last 10 days: volume on up days is ${ratio.toFixed(1)}x the volume on down days (buyers dominate).`]); }
+      else if(ratio<0.83){ vScore--; vLines.push(['r',`Last 10 days: volume on down days is ${(1/ratio).toFixed(1)}x the volume on up days (sellers dominate).`]); }
+      else vLines.push(['y','Last 10 days: up-day and down-day volume are roughly balanced.']);
+    }
+    vMax++;
+    const priceUp=close>bars[li-1].close;
+    if(volX!=null && volX>1.2){
+      if(priceUp){ vScore++; vLines.push(['g',`Today's volume is ${volX.toFixed(1)}x the 20-day average and price rose (confirmed move).`]); }
+      else { vScore--; vLines.push(['r',`Today's volume is ${volX.toFixed(1)}x the 20-day average and price fell (heavy selling).`]); }
+    } else if(volX!=null && volX<0.7){
+      vLines.push(['y',`Today's volume is only ${volX.toFixed(1)}x the 20-day average, so the move lacks conviction.`]);
+    } else if(volX!=null) vLines.push(['y',`Today's volume is ${volX.toFixed(1)}x the 20-day average (normal).`]);
+    vMax++;
+    const obvUp=calc.obv[li]-calc.obv[Math.max(0,li-10)];
+    if(obvUp>0){ vScore++; vLines.push(['g','On-balance volume is rising over the last 10 days.']); }
+    else if(obvUp<0){ vScore--; vLines.push(['r','On-balance volume is falling over the last 10 days.']); }
+    else vLines.push(['y','On-balance volume is flat.']);
+    modules.push({name:'Volume', score:vScore, max:vMax});
+  } else {
+    vLines.push(['n','Volume analysis needs at least ~20 bars.']);
+  }
+
+  document.getElementById('ichiPanel').innerHTML=ichiLines(iLines);
+  document.getElementById('bbPanel').innerHTML=ichiLines(bLines);
+  document.getElementById('volPanel').innerHTML=ichiLines(vLines);
+
+  /* ---- Combined outcome ---- */
+  const out=document.getElementById('ichiOutcome');
+  if(modules.length<2){
+    lastIchiOutcome=null;
+    out.innerHTML='<div class="muted">Not enough data yet. Load at least ~30 daily bars (6 months is better).</div>';
+  } else {
+    const avg=modules.reduce((a,mo)=>a+mo.score/mo.max,0)/modules.length;
+    let verdict, cls;
+    if(avg>=0.35){ verdict='BUY-leaning'; cls='g'; }
+    else if(avg<=-0.35){ verdict='SELL-leaning'; cls='r'; }
+    else { verdict='HOLD / WAIT'; cls='y'; }
+    const modLine=modules.map(mo=>{
+      const n=mo.score/mo.max; const c=n>=0.35?'g':n<=-0.35?'r':'y';
+      return `<div class="kv"><span>${mo.name}</span><span class="tag ${c}">${mo.score>0?'+':''}${mo.score} of ±${mo.max}</span></div>`;
+    }).join('');
+    lastIchiOutcome={verdict,avg:Math.round(avg*100)/100};
+    out.innerHTML=`
+      <div class="statusline"><span style="font-size:15px;font-weight:700">Outcome</span><span class="tag ${cls}" style="font-size:15px">${verdict}</span></div>
+      ${modLine}
+      <div class="footNote">Each module is scored from -1 to +1 and the three are averaged (${avg>=0?'+':''}${avg.toFixed(2)} now). Above +0.35 is BUY-leaning, below -0.35 is SELL-leaning, and anything between is HOLD / WAIT.</div>`;
+  }
+  drawIchiChart();
+}
+
+function drawIchiChart(){
+  if(!lastIchi) return;
+  const canvas=document.getElementById('ichiChart');
+  if(!canvas || canvas.clientWidth===0) return;
+  const {bars,ich,bb}=lastIchi;
+  const showI=document.getElementById('togIchi').checked, showB=document.getElementById('togBB').checked;
+  const N=Math.min(100,bars.length), start=bars.length-N;
+  const dpr=window.devicePixelRatio||1, w=canvas.clientWidth, h=300;
+  canvas.width=w*dpr; canvas.height=h*dpr;
+  const ctx=canvas.getContext('2d'); ctx.scale(dpr,dpr); ctx.clearRect(0,0,w,h);
+  const priceH=h*0.78, volTop=h*0.82, volH=h*0.18;
+  let hi=-Infinity, lo=Infinity;
+  const take=v=>{ if(v!=null){ if(v>hi) hi=v; if(v<lo) lo=v; } };
+  for(let i=start;i<bars.length;i++){
+    take(bars[i].high); take(bars[i].low);
+    if(showB){ take(bb.upper[i]); take(bb.lower[i]); }
+    if(showI){ take(ich.cloudA[i]); take(ich.cloudB[i]); take(ich.tenkan[i]); take(ich.kijun[i]); }
+  }
+  const pad=(hi-lo)*0.05||1; hi+=pad; lo-=pad;
+  const yP=v=>priceH-((v-lo)/(hi-lo))*priceH;
+  const cw=w/N, xAt=k=>k*cw+cw/2;
+  const line=(arr,color,dash)=>{
+    ctx.beginPath(); ctx.strokeStyle=color; ctx.lineWidth=1.3; ctx.setLineDash(dash||[]);
+    let started=false;
+    for(let k=0;k<N;k++){ const v=arr[start+k]; if(v==null){ started=false; continue; } if(!started){ ctx.moveTo(xAt(k),yP(v)); started=true; } else ctx.lineTo(xAt(k),yP(v)); }
+    ctx.stroke(); ctx.setLineDash([]);
+  };
+  if(showI){
+    for(let k=1;k<N;k++){
+      const a0=ich.cloudA[start+k-1], b0=ich.cloudB[start+k-1], a1=ich.cloudA[start+k], b1=ich.cloudB[start+k];
+      if(a0==null||b0==null||a1==null||b1==null) continue;
+      ctx.beginPath(); ctx.moveTo(xAt(k-1),yP(a0)); ctx.lineTo(xAt(k),yP(a1)); ctx.lineTo(xAt(k),yP(b1)); ctx.lineTo(xAt(k-1),yP(b0)); ctx.closePath();
+      ctx.fillStyle=a1>=b1?'rgba(74,222,128,0.22)':'rgba(248,113,113,0.22)'; ctx.fill();
+    }
+  }
+  if(showB){
+    ctx.beginPath(); let started=false;
+    for(let k=0;k<N;k++){ const v=bb.upper[start+k]; if(v==null) continue; if(!started){ ctx.moveTo(xAt(k),yP(v)); started=true; } else ctx.lineTo(xAt(k),yP(v)); }
+    for(let k=N-1;k>=0;k--){ const v=bb.lower[start+k]; if(v==null) continue; ctx.lineTo(xAt(k),yP(v)); }
+    ctx.closePath(); ctx.fillStyle='rgba(59,130,246,0.08)'; ctx.fill();
+    line(bb.upper,'#3b82f6'); line(bb.lower,'#3b82f6'); line(bb.mid,'#93a3bf',[4,3]);
+  }
+  if(showI){ line(ich.tenkan,'#f87171'); line(ich.kijun,'#60a5fa'); }
+  // candles
+  for(let k=0;k<N;k++){
+    const b=bars[start+k], up=b.close>=b.open, x=xAt(k);
+    ctx.strokeStyle=ctx.fillStyle=up?'#4ade80':'#f87171';
+    ctx.beginPath(); ctx.moveTo(x,yP(b.high)); ctx.lineTo(x,yP(b.low)); ctx.stroke();
+    const top=yP(Math.max(b.open,b.close)), bot=yP(Math.min(b.open,b.close));
+    ctx.fillRect(x-cw*0.35,top,cw*0.7,Math.max(1,bot-top));
+  }
+  // volume
+  let maxV=1; for(let k=0;k<N;k++) maxV=Math.max(maxV,bars[start+k].volume);
+  for(let k=0;k<N;k++){
+    const b=bars[start+k], vh=(b.volume/maxV)*volH;
+    ctx.fillStyle=b.close>=b.open?'rgba(74,222,128,0.5)':'rgba(248,113,113,0.5)';
+    ctx.fillRect(xAt(k)-cw*0.35, volTop+volH-vh, cw*0.7, vh);
+  }
+}
+document.getElementById('togIchi').addEventListener('change', drawIchiChart);
+document.getElementById('togBB').addEventListener('change', drawIchiChart);
+
+/* ============ WHY IS IT MOVING ============ */
+document.getElementById('whyBtn').addEventListener('click', ()=>{
+  const date = document.getElementById('whyDateSelect').value;
+  const bars = DB[currentSymbol].bars;
+  const i = bars.findIndex(b=>b.date===date);
+  if(i<1){ document.getElementById('whyTimeline').innerHTML = '<div class="muted">Not enough prior data for this date.</div>'; return; }
+  const b = bars[i], pb = bars[i-1];
+  const calc = computeAll(bars.slice(0,i+1));
+  const li = i;
+  const vol20 = IND.sma(bars.slice(0,i+1).map(x=>x.volume),20)[li];
+  const chgP = (b.close-pb.close)/pb.close*100;
+  const gapP = (b.open-pb.close)/pb.close*100;
+  const volX = vol20? b.volume/vol20 : null;
+  const events = [];
+  events.push([b.date+' open', `Opened ${gapP>=0?'up':'down'} ${Math.abs(gapP).toFixed(2)}% from prior close.`]);
+  if(volX && volX>1.3) events.push(['Session', `Volume expansion: ${(volX*100).toFixed(0)}% of 20-day average.`]);
+  if(Math.abs(chgP)>2) events.push(['Session', `Large move: ${chgP>=0?'+':''}${chgP.toFixed(2)}% close-to-close.`]);
+  const range = b.high-b.low, body = Math.abs(b.close-b.open);
+  if(range>0 && body/range < 0.35) events.push(['Session', 'Long wick relative to body — signs of intrasession rejection/absorption.']);
+  const obvNow = calc.obv[li], obvPrev = calc.obv[li-1];
+  if(obvNow!=null && obvPrev!=null) events.push(['Session', `OBV ${obvNow>obvPrev?'rose':'fell'}, ${obvNow>obvPrev?'consistent with':'diverging from'} the price move.`]);
+  events.push(['Data gap', 'Options OI change, FII/DII flow, news and filings for this date require the Upstox module and a news source — not available offline.']);
+  events.push([b.date+' close', `Closed at ₹${b.close.toFixed(2)} (${chgP>=0?'+':''}${chgP.toFixed(2)}%).`]);
+  document.getElementById('whyTimeline').innerHTML = events.map(([t,d])=>
+    `<div class="tlItem"><span class="tlTime">${t}</span>${d}</div>`).join('');
+});
+
+/* ============ HISTORICAL PATTERN ENGINE ============ */
+document.getElementById('patternBtn').addEventListener('click', ()=>{
+  const bars = DB[currentSymbol].bars;
+  const fwd = parseInt(document.getElementById('fwdDays').value)||5;
+  const calc = computeAll(bars);
+  const li = bars.length-1;
+  const curRSI = calc.rsi[li], curADX = calc.adx[li];
+  const vol20 = calc.vol20[li];
+  const curVolX = vol20 ? bars[li].volume/vol20 : null;
+  if(curRSI==null || curADX==null){ document.getElementById('patternResult').innerHTML='<div class="muted">Not enough data yet (need 20+ bars).</div>'; return; }
+  const bucket = v => v==null?null:Math.round(v/10)*10;
+  const rsiB = bucket(curRSI), adxB = bucket(curADX);
+  let matches = [];
+  for(let i=20;i<bars.length-fwd-1;i++){
+    const r = calc.rsi[i], a = calc.adx[i], vx = calc.vol20[i]? bars[i].volume/calc.vol20[i] : null;
+    if(r==null||a==null) continue;
+    if(bucket(r)===rsiB && bucket(a)===adxB && vx!=null && curVolX!=null && Math.abs(vx-curVolX)<0.5){
+      const fwdRet = (bars[i+fwd].close - bars[i].close)/bars[i].close*100;
+      matches.push({date:bars[i].date, fwdRet});
+    }
+  }
+  if(!matches.length){ document.getElementById('patternResult').innerHTML = '<div class="muted">No comparable historical setups found in the loaded data.</div>'; return; }
+  const pos = matches.filter(m=>m.fwdRet>0).length, neg = matches.length-pos;
+  const median = matches.map(m=>m.fwdRet).sort((a,b)=>a-b)[Math.floor(matches.length/2)];
+  document.getElementById('patternResult').innerHTML = `
+    <div class="kv"><span>Similar historical setups found</span><span>${matches.length}</span></div>
+    <div class="kv"><span>Positive after ${fwd}d</span><span>${pos}</span></div>
+    <div class="kv"><span>Negative after ${fwd}d</span><span>${neg}</span></div>
+    <div class="kv"><span>Median forward move</span><span>${median>=0?'+':''}${median.toFixed(2)}%</span></div>
+    <div class="footNote">Setup match: RSI ≈ ${curRSI.toFixed(0)}, ADX ≈ ${curADX.toFixed(0)}, volume ≈ ${curVolX?.toFixed(2)}x 20d avg. Historical analysis only — not a prediction.</div>
+  `;
+});
+
+/* ============ UPSTOX (OPTIONS / OI / PCR / MAX PAIN) ============ */
+const PROXIES = [
+  u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+  u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+  u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+];
+async function proxyFetch(url, opts={}, timeoutMs=10000){
+  for(const build of PROXIES){
+    try{
+      const ctrl = new AbortController(); const t = setTimeout(()=>ctrl.abort(), timeoutMs);
+      const res = await fetch(build(url), {...opts, signal: ctrl.signal});
+      clearTimeout(t);
+      if(res.ok) return res;
+    }catch(e){ /* try next proxy */ }
+  }
+  throw new Error('All proxies failed');
+}
+
+/* ============ INSTRUMENT KEY LOOKUP (Upstox public NSE.json.gz) ============ */
+let instrumentCache = null; // { eq: [...], fo: [...] } parsed once per session, not persisted (too large for localStorage)
+
+async function fetchInstrumentMaster(){
+  const url = 'https://assets.upstox.com/market-quote/instruments/exchange/NSE.json.gz';
+  let res;
+  try{
+    const ctrl = new AbortController(); const t = setTimeout(()=>ctrl.abort(), 12000);
+    res = await fetch(url, {signal: ctrl.signal}); clearTimeout(t);
+    if(!res.ok) throw new Error('direct fetch failed: '+res.status);
+  }
+  catch(e){ res = await proxyFetch(url, {}, 30000); }
+  // The file is gzip-compressed; if the server didn't set Content-Encoding, the browser won't auto-decompress,
+  // so decompress manually via the native DecompressionStream API.
+  let text;
+  try{
+    const ds = new DecompressionStream('gzip');
+    const decompressed = res.body.pipeThrough(ds);
+    text = await new Response(decompressed).text();
+  }catch(e){
+    // Either already decompressed by the browser/proxy, or DecompressionStream unsupported — fall back to raw text.
+    text = await res.text();
+  }
+  const arr = JSON.parse(text);
+  const eq = arr.filter(i => i.segment==='NSE_EQ');
+  const fo = arr.filter(i => i.segment==='NSE_FO');
+  return { eq, fo };
+}
+
+document.getElementById('instrLookupBtn').addEventListener('click', async ()=>{
+  const q = document.getElementById('instrLookupSymbol').value.trim().toUpperCase();
+  const statusEl = document.getElementById('instrLookupStatus');
+  const resultsEl = document.getElementById('instrLookupResults');
+  if(!q){ statusEl.textContent = 'Enter a trading symbol or partial name to search.'; return; }
+  if(!instrumentCache){
+    statusEl.textContent = 'Downloading instrument master (large file, first search only)...';
+    try{ instrumentCache = await fetchInstrumentMaster(); }
+    catch(e){ statusEl.textContent = 'Download failed: ' + e.message + '. Try again on Wi-Fi, or paste the instrument key manually if you already know it.'; return; }
+  }
+  const matches = instrumentCache.eq.filter(i =>
+    (i.trading_symbol && i.trading_symbol.toUpperCase().includes(q)) ||
+    (i.name && i.name.toUpperCase().includes(q))
+  ).slice(0,15);
+  statusEl.textContent = matches.length ? `${matches.length} match(es):` : 'No matches found — try a shorter fragment.';
+  resultsEl.innerHTML = matches.map(m => `
+    <div class="statusline">
+      <span>${m.trading_symbol} — ${m.name}</span>
+      <button class="secondary pickInstr" data-key="${m.instrument_key}" data-symbol="${m.trading_symbol}" style="padding:4px 10px;font-size:12px">Use this</button>
+    </div>`).join('');
+  document.querySelectorAll('.pickInstr').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.getElementById('upstoxInstrumentKey').value = btn.dataset.key;
+      statusEl.textContent = `Selected ${btn.dataset.symbol}. Now finding available expiries...`;
+      const underlying = btn.dataset.symbol;
+      const expiries = [...new Set(instrumentCache.fo
+        .filter(f => f.underlying_symbol === underlying && f.instrument_type && f.instrument_type.startsWith('OPT'))
+        .map(f => new Date(f.expiry).toISOString().slice(0,10))
+      )].sort();
+      const chipsEl = document.getElementById('expiryChips');
+      if(expiries.length){
+        chipsEl.innerHTML = 'Available expiries: ' + expiries.map(d=>`<button class="ghost expiryChip" data-d="${d}" style="padding:4px 10px;font-size:12px;margin:2px">${d}</button>`).join('');
+        document.querySelectorAll('.expiryChip').forEach(c=> c.addEventListener('click', ()=>{ document.getElementById('upstoxExpiry').value = c.dataset.d; }));
+      } else {
+        chipsEl.innerHTML = '<span class="muted">No F&O expiries found for this symbol — it may not trade in derivatives.</span>';
+      }
+    });
+  });
+});
+
+/* ============ Upstox token: now global (one token for the whole app, not per-symbol) ============ */
+function getGlobalUpstoxToken(){ return localStorage.getItem('msi_upstox_token') || ''; }
+function setGlobalUpstoxToken(t){ localStorage.setItem('msi_upstox_token', t); }
+
+document.getElementById('upstoxSaveBtn').addEventListener('click', ()=>{
+  const token = document.getElementById('upstoxToken').value.trim();
+  setGlobalUpstoxToken(token);
+  document.getElementById('upstoxStatus').textContent = 'Token saved — used for every stock and for the index ticker at the top.';
+  fetchIndexTicker();
+});
+
+document.getElementById('upstoxFetchBtn').addEventListener('click', async ()=>{
+  const token = document.getElementById('upstoxToken').value.trim();
+  const instrumentKey = document.getElementById('upstoxInstrumentKey').value.trim();
+  const expiry = document.getElementById('upstoxExpiry').value.trim();
+  const statusEl = document.getElementById('upstoxStatus');
+  if(!token || !instrumentKey || !expiry){ statusEl.textContent = 'Enter access token, instrument key and expiry date first.'; return; }
+  statusEl.textContent = 'Fetching option chain from Upstox...';
+  try{
+    // Upstox v2 option chain endpoint — direct call (Upstox allows browser CORS on some routes; falls back to proxy chain otherwise)
+    const url = `https://api.upstox.com/v2/option/chain?instrument_key=${encodeURIComponent(instrumentKey)}&expiry_date=${expiry}`;
+    let res;
+    try{
+      res = await fetch(url, { headers: { 'Accept':'application/json', 'Authorization':'Bearer '+token } });
+      if(!res.ok) throw new Error('direct call failed: '+res.status);
+    }catch(e){
+      res = await proxyFetch(url, { headers: { 'Accept':'application/json', 'Authorization':'Bearer '+token } });
+    }
+    const data = await res.json();
+    renderOptionChain(data.data || []);
+    statusEl.textContent = 'Option chain loaded.';
+    setGlobalUpstoxToken(token);
+  }catch(err){
+    statusEl.textContent = 'Fetch failed: ' + err.message + '. Upstox tokens expire daily and instrument keys must match their instrument master exactly — check both.';
+  }
+});
+
+/* ============ NIFTY 50 / BANK NIFTY TICKER (top of app) ============ */
+async function fetchIndexTicker(){
+  const el = document.getElementById('indexTicker');
+  const token = getGlobalUpstoxToken();
+  if(!token){ el.innerHTML = '<span class="muted">Indices: paste your Upstox token in the Options tab to show Nifty 50 / Bank Nifty here.</span>'; return; }
+  el.innerHTML = '<span class="muted">Loading Nifty 50 / Bank Nifty...</span>';
+  // Upstox has used slightly different index naming across API versions/docs, so try both known spellings.
+  const keySets = [
+    ['NSE_INDEX|Nifty 50','NSE_INDEX|Nifty Bank'],
+    ['NSE_INDEX|Nifty 50','NSE_INDEX|Bank Nifty']
+  ];
+  for(const keys of keySets){
+    try{
+      const url = `https://api.upstox.com/v2/market-quote/quotes?instrument_key=${encodeURIComponent(keys.join(','))}`;
+      let res;
+      try{ res = await fetch(url, { headers: { 'Accept':'application/json', 'Authorization':'Bearer '+token } }); if(!res.ok) throw new Error(res.status); }
+      catch(e){ res = await proxyFetch(url, { headers: { 'Accept':'application/json', 'Authorization':'Bearer '+token } }); }
+      const json = await res.json();
+      const entries = Object.values(json.data || {});
+      if(!entries.length) continue;
+      const parts = entries.map(q=>{
+        const nameStr = (q.trading_symbol || q.symbol || '').toUpperCase();
+        const name = nameStr.includes('BANK') ? 'BANK NIFTY' : 'NIFTY 50';
+        const ltp = q.last_price;
+        // Upstox's ohlc.close in this endpoint is a live/current snapshot, not yesterday's close — it was
+        // landing at (or near) last_price and making every change show as 0%. net_change is the real field.
+        let chg = q.net_change, prevClose = (ltp!=null && chg!=null) ? ltp - chg : null;
+        if(chg==null && q.ohlc && q.ohlc.close!=null){ prevClose = q.ohlc.close; chg = (ltp!=null) ? ltp-prevClose : null; }
+        const chgP = (chg!=null && prevClose) ? chg/prevClose*100 : null;
+        const cls = chgP==null ? '' : chgP>=0?'up':'down';
+        return {name, ltp, chg, chgP, cls};
+      });
+      // Safety net: if name detection still produced the same label twice, tell them apart by value
+      // (Bank Nifty trades meaningfully higher than Nifty 50), rather than showing two identical labels.
+      if(parts.length===2 && parts[0].name===parts[1].name && parts[0].ltp!=null && parts[1].ltp!=null){
+        const hiIdx = parts[0].ltp >= parts[1].ltp ? 0 : 1;
+        parts[hiIdx].name = 'BANK NIFTY'; parts[1-hiIdx].name = 'NIFTY 50';
+      }
+      window.MSI_NIFTY = parts.find(p=>p.name==='NIFTY 50');
+      el.innerHTML = parts.map(p=>
+        `<span><b>${p.name}</b> ${p.ltp!=null?p.ltp.toFixed(2):'-'} ${p.chg!=null?`<span class="${p.cls}">${p.chg>=0?'+':''}${p.chg.toFixed(2)} (${p.chgP>=0?'+':''}${p.chgP.toFixed(2)}%)</span>`:''}</span>`
+      ).join('') + ' <button class="ghost" id="tickerRefresh" style="padding:2px 8px;font-size:11px;margin-left:auto">↻</button>';
+      document.getElementById('tickerRefresh').addEventListener('click', fetchIndexTicker);
+      return;
+    }catch(e){ /* try next key spelling */ }
+  }
+  el.innerHTML = '<span class="muted">Could not load indices right now. </span><button class="ghost" id="tickerRefresh" style="padding:2px 8px;font-size:11px">Retry</button>';
+  document.getElementById('tickerRefresh').addEventListener('click', fetchIndexTicker);
+}
+document.getElementById('upstoxToken').value = getGlobalUpstoxToken();
+fetchIndexTicker();
+// Auto-refresh while the app is actually visible (skip when backgrounded, to save battery/data).
+setInterval(()=>{ if(!document.hidden) fetchIndexTicker(); }, 45000);
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) fetchIndexTicker(); });
+
+function renderOptionChain(chain){
+  if(!chain.length){ document.getElementById('optionsTableWrap').innerHTML = '<div class="muted">No option chain data returned.</div>'; return; }
+  let callOI=0, putOI=0;
+  const rows = chain.map(row=>{
+    const call = row.call_options?.market_data || {}; const put = row.put_options?.market_data || {};
+    callOI += call.oi||0; putOI += put.oi||0;
+    return {strike: row.strike_price, callOI: call.oi, callChgOI: (call.oi!=null&&call.prev_oi!=null)? call.oi-call.prev_oi : null, callIV: row.call_options?.option_greeks?.iv,
+             putOI: put.oi, putChgOI: (put.oi!=null&&put.prev_oi!=null)? put.oi-put.prev_oi : null, putIV: row.put_options?.option_greeks?.iv};
+  });
+  const pcr = putOI && callOI ? (putOI/callOI) : null;
+  // max pain: strike minimizing total ITM value paid to option holders
+  let maxPain=null, minLoss=Infinity;
+  rows.forEach(r=>{
+    let loss=0;
+    rows.forEach(o=>{
+      if(o.strike < r.strike) loss += (r.strike-o.strike) * (o.callOI||0);
+      if(o.strike > r.strike) loss += (o.strike-r.strike) * (o.putOI||0);
+    });
+    if(loss<minLoss){ minLoss=loss; maxPain=r.strike; }
+  });
+  document.getElementById('optionsGrid').innerHTML = `
+    <div class="kv"><span>Total Call OI</span><span>${callOI.toLocaleString('en-IN')}</span></div>
+    <div class="kv"><span>Total Put OI</span><span>${putOI.toLocaleString('en-IN')}</span></div>
+    <div class="kv"><span>PCR</span><span>${pcr?pcr.toFixed(2):'-'}</span></div>
+    <div class="kv"><span>Max pain strike</span><span>${maxPain??'-'}</span></div>
+    <div class="kv"><span>Bias (by PCR)</span><span>${pcr==null?'-':pcr>1.2?'🟢 Put-heavy (bullish bias)':pcr<0.8?'🔴 Call-heavy (bearish bias)':'🟡 Balanced'}</span></div>
+  `;
+  document.getElementById('optionsTableWrap').innerHTML = `<table>
+    <thead><tr><th>Strike</th><th>Call OI</th><th>ΔOI</th><th>IV</th><th>Put OI</th><th>ΔOI</th><th>IV</th></tr></thead>
+    <tbody>${rows.map(r=>`<tr><td>${r.strike}</td><td>${r.callOI??'-'}</td><td>${r.callChgOI!=null?(r.callChgOI>=0?'+':'')+r.callChgOI:'-'}</td><td>${r.callIV?r.callIV.toFixed(2):'-'}</td><td>${r.putOI??'-'}</td><td>${r.putChgOI!=null?(r.putChgOI>=0?'+':'')+r.putChgOI:'-'}</td><td>${r.putIV?r.putIV.toFixed(2):'-'}</td></tr>`).join('')}</tbody>
+  </table>`;
+}
+
+function parseMoneyCell(text){
+  // Cells look like "₹-9,484.22" or "₹10,041.84" — strip the symbol/commas, keep the sign.
+  const cleaned = (text||'').replace(/[₹,\s]/g,'');
+  const n = parseFloat(cleaned);
+  return isNaN(n) ? null : n;
+}
+document.getElementById('fiiFetchBtn').addEventListener('click', async ()=>{
+  const el = document.getElementById('fiiResult');
+  el.innerHTML = '<div class="muted">Fetching Upstox\'s FII/DII page...</div>';
+  try{
+    const url = 'https://upstox.com/fii-dii-data/';
+    let res;
+    try{ res = await fetch(url); if(!res.ok) throw new Error('direct fetch failed: '+res.status); }
+    catch(e){ res = await proxyFetch(url, {}, 15000); }
+    const html = await res.text();
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const tables = doc.querySelectorAll('table');
+    if(!tables.length) throw new Error('No table found on the page — Upstox may have changed its layout.');
+    // First table on the page is the Cash-market activity table (Date, FII gross buy/sell/net, DII gross buy/sell/net).
+    const rows = Array.from(tables[0].querySelectorAll('tbody tr'));
+    if(!rows.length) throw new Error('Table found but no data rows — page layout may have changed.');
+    const parsed = rows.map(tr=>{
+      const cells = Array.from(tr.querySelectorAll('td')).map(td=>td.textContent.trim());
+      return { date: cells[0], fiiNet: parseMoneyCell(cells[3]), diiNet: parseMoneyCell(cells[6]) };
+    }).filter(r=>r.date && r.fiiNet!=null && r.diiNet!=null);
+    if(!parsed.length) throw new Error('Rows found but values didn\'t parse — page layout may have changed.');
+    el.innerHTML = `<table><thead><tr><th>Date</th><th>FII Net (Cr.)</th><th>DII Net (Cr.)</th></tr></thead><tbody>` +
+      parsed.map(r=>`<tr><td>${r.date}</td><td style="color:${r.fiiNet>=0?'#4ade80':'#f87171'}">${r.fiiNet>=0?'+':''}${r.fiiNet.toFixed(2)}</td><td style="color:${r.diiNet>=0?'#4ade80':'#f87171'}">${r.diiNet>=0?'+':''}${r.diiNet.toFixed(2)}</td></tr>`).join('') +
+      `</tbody></table><div class="footNote">Cash-market segment only, sourced from Upstox's public FII/DII page — not a direct exchange feed.</div>`;
+  }catch(err){
+    el.innerHTML = `<div class="muted">Fetch failed: ${err.message}. You can still check the numbers directly at upstox.com/fii-dii-data, or download NSE's CSV manually and I can add an upload path for it, same pattern as the Bhavcopy uploader.</div>`;
+  }
+});
+
+/* ============ AI ASSISTANT (Groq) ============ */
+function buildContext(){
+  const rec = DB[currentSymbol]; const bars = rec.bars; const li = bars.length-1;
+  const calc = computeAll(bars);
+  const upstox = rec.upstox?.token ? 'connected' : 'not connected';
+  return `Stock: ${currentSymbol}
+Last close: ${bars[li].close} on ${bars[li].date}
+RSI(14): ${fmt(calc.rsi[li])}, ADX(14): ${fmt(calc.adx[li])}, ATR(14): ${fmt(calc.atr[li])}
+EMA20: ${fmt(calc.ema20[li])}, EMA50: ${fmt(calc.ema50[li])}, EMA200: ${fmt(calc.ema200[li])}
+Volume vs 20d avg: ${calc.vol20[li]? (bars[li].volume/calc.vol20[li]).toFixed(2)+'x' : 'n/a'}
+OBV trend: ${obvSlopeLabel(calc.obv)}, CMF(20): ${fmt(calc.cmf[li],3)}
+Ichimoku/Bollinger/volume outcome: ${lastIchiOutcome ? lastIchiOutcome.verdict + ' (average score ' + lastIchiOutcome.avg + ')' : 'not computed'}
+Rule-based signal in the app: ${lastSignal ? lastSignal.signal + ' (composite ' + lastSignal.composite + '/100, regime ' + lastSignal.regime + '). Reasons: ' + lastSignal.reasons.join('; ') : 'not computed'}
+Upstox options/institutional module: ${upstox}
+Bars available: ${bars.length} (from ${bars[0].date} to ${bars[li].date})
+${window.MSI_EXTRA||''}`;
+}
+/* ============ Persist Groq key/model locally so it isn't retyped every session ============ */
+(function(){
+  const keyEl = document.getElementById('groqKey'), modelEl = document.getElementById('groqModel');
+  const saved = JSON.parse(localStorage.getItem('msi_groq') || '{}');
+  if(saved.key) keyEl.value = saved.key;
+  if(saved.model && [...modelEl.options].some(o=>o.value===saved.model)) modelEl.value = saved.model;
+  function save(){ localStorage.setItem('msi_groq', JSON.stringify({key: keyEl.value.trim(), model: modelEl.value})); }
+  keyEl.addEventListener('change', save);
+  modelEl.addEventListener('change', save);
+})();
+
+let chatHistory = [];
+document.getElementById('chatSendBtn').addEventListener('click', sendChat);
+document.getElementById('chatInput').addEventListener('keydown', e=>{ if(e.key==='Enter') sendChat(); });
+async function sendChat(){
+  const key = document.getElementById('groqKey').value.trim();
+  const model = document.getElementById('groqModel').value;
+  const input = document.getElementById('chatInput');
+  const question = input.value.trim();
+  if(!currentSymbol){ alert('Load a stock first.'); return; }
+  if(!key){ alert('Enter your Groq API key.'); return; }
+  if(!question) return;
+  chatHistory.push({role:'user', content:question});
+  renderChat();
+  input.value='';
+  const sysPrompt = `You are a stock analysis assistant. Answer ONLY using the structured data provided below about this one stock. If the data needed to answer isn't present (e.g. no news source, no Upstox connection), say so explicitly rather than guessing or inventing numbers. Be concise and evidence-based, you may explain the app's own rule-based signal and its reasons, but never give personalized buy/sell instructions, and note this is not investment advice.
+
+DATA:
+${buildContext()}`;
+  try{
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method:'POST',
+      headers: {'Content-Type':'application/json', 'Authorization':'Bearer '+key},
+      body: JSON.stringify({ model, messages: [{role:'system',content:sysPrompt}, ...chatHistory.slice(-6)] })
+    });
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content || ('Error: ' + (data.error?.message || 'no response'));
+    chatHistory.push({role:'assistant', content:reply});
+  }catch(e){
+    chatHistory.push({role:'assistant', content:'Request failed: ' + e.message});
+  }
+  renderChat();
+}
+function renderChat(){
+  const el = document.getElementById('chat');
+  el.innerHTML = chatHistory.map(m=>`<div class="msg ${m.role==='user'?'user':'ai'}">${escapeHtml(m.content)}</div>`).join('');
+  el.scrollTop = el.scrollHeight;
+}
+function escapeHtml(s){ return s.replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+/* ============ APP LOCK (password + optional fingerprint) ============ */
+const LOCK_KEY='msi_lock';
+const byId=id=>document.getElementById(id);
+const _b64=buf=>btoa(String.fromCharCode(...new Uint8Array(buf)));
+const _unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+const getLock=()=>{ try{ return JSON.parse(localStorage.getItem(LOCK_KEY)||'null'); }catch(e){ return null; } };
+const setLock=o=>{ if(o) localStorage.setItem(LOCK_KEY,JSON.stringify(o)); else localStorage.removeItem(LOCK_KEY); };
+async function hashPw(pw,salt){
+  const k=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveBits']);
+  return _b64(await crypto.subtle.deriveBits({name:'PBKDF2',salt:_unb64(salt),iterations:150000,hash:'SHA-256'},k,256));
+}
+let lockFails=0, lockWaitUntil=0, lockHiddenAt=0;
+function lockUI(){
+  const l=getLock();
+  byId('lockStatus').textContent=l?('Lock is ON'+(l.cred?' · fingerprint enabled':'')):'Lock is OFF — anyone who opens this app can see your data.';
+  byId('lockSetup').style.display=l?'none':'flex';
+  byId('lockManage').style.display=l?'flex':'none';
+  byId('lockBioBtn').style.display=(l&&window.PublicKeyCredential)?'inline-block':'none';
+  byId('lockBioBtn').textContent=(l&&l.cred)?'Remove fingerprint':'Enable fingerprint';
+  byId('lockFingerBtn').style.display=(l&&l.cred)?'block':'none';
+}
+function showLock(){
+  if(!getLock()) return;
+  document.documentElement.classList.add('locked');
+  byId('settingsModal').style.display='none';
+  byId('lockInput').value=''; byId('lockMsg').textContent=''; lockUI();
+}
+function doUnlock(){ document.documentElement.classList.remove('locked'); lockFails=0; byId('lockInput').value=''; byId('lockMsg').textContent=''; }
+async function tryPw(){
+  const l=getLock(); if(!l){ doUnlock(); return; }
+  if(Date.now()<lockWaitUntil){ byId('lockMsg').textContent='Too many attempts. Wait '+Math.ceil((lockWaitUntil-Date.now())/1000)+'s.'; return; }
+  if(!window.crypto||!crypto.subtle){ byId('lockMsg').textContent='Needs a secure (https) page.'; return; }
+  if(await hashPw(byId('lockInput').value,l.salt)===l.hash){ doUnlock(); return; }
+  lockFails++; if(lockFails>=3) lockWaitUntil=Date.now()+30000;
+  byId('lockMsg').textContent='Wrong password.'+(lockFails>=3?' Wait 30s.':'');
+}
+async function bioUnlock(){
+  const l=getLock(); if(!l||!l.cred) return;
+  try{
+    await navigator.credentials.get({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),allowCredentials:[{type:'public-key',id:_unb64(l.cred),transports:['internal']}],userVerification:'required',timeout:60000}});
+    doUnlock();
+  }catch(e){ byId('lockMsg').textContent='Fingerprint not recognised. Use your password.'; }
+}
+async function bioEnroll(){
+  try{
+    const c=await navigator.credentials.create({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),rp:{name:'Marak Stock Intelligence'},user:{id:crypto.getRandomValues(new Uint8Array(16)),name:'user',displayName:'User'},pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required'},timeout:60000}});
+    const l=getLock(); l.cred=_b64(c.rawId); setLock(l); lockUI();
+  }catch(e){ alert('Could not enable fingerprint: '+e.message+'\nMake sure a fingerprint/screen lock is set on your phone.'); }
+}
+byId('lockUnlockBtn').onclick=tryPw;
+byId('lockInput').addEventListener('keydown',e=>{ if(e.key==='Enter') tryPw(); });
+byId('lockFingerBtn').onclick=bioUnlock;
+byId('lockForgotBtn').onclick=()=>{ if(confirm('This ERASES all stock data, tokens and keys stored in this app and removes the lock. Continue?')){ localStorage.clear(); location.reload(); } };
+byId('lockEnableBtn').onclick=async()=>{
+  if(!window.crypto||!crypto.subtle){ alert('App lock needs a secure (https) page.'); return; }
+  const a=byId('lockNew').value, b=byId('lockNew2').value;
+  if(a.length<4){ alert('Use at least 4 characters.'); return; }
+  if(a!==b){ alert('The two entries do not match.'); return; }
+  const salt=_b64(crypto.getRandomValues(new Uint8Array(16)));
+  setLock({salt,hash:await hashPw(a,salt),cred:null});
+  byId('lockNew').value=''; byId('lockNew2').value=''; lockUI();
+};
+byId('lockOffBtn').onclick=async()=>{
+  const l=getLock(); if(!l) return;
+  if(await hashPw(byId('lockCur').value,l.salt)!==l.hash){ alert('Current password is wrong.'); return; }
+  setLock(null); byId('lockCur').value=''; lockUI();
+};
+byId('lockBioBtn').onclick=()=>{
+  const l=getLock(); if(!l) return;
+  if(l.cred){ l.cred=null; setLock(l); lockUI(); } else bioEnroll();
+};
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden) lockHiddenAt=Date.now();
+  else if(getLock()&&lockHiddenAt&&Date.now()-lockHiddenAt>120000) showLock();
+});
+byId('settingsBtn').onclick=()=>{ lockUI(); byId('settingsModal').style.display='flex'; };
+const closeSettings=()=>{ byId('settingsModal').style.display='none'; };
+byId('settingsClose').onclick=closeSettings;
+byId('settingsModal').addEventListener('click',e=>{ if(e.target.id==='settingsModal') closeSettings(); });
+lockUI();
+if(getLock()){ showLock(); if(getLock().cred) setTimeout(bioUnlock,400); }
+
+/* ============ SECTOR / RELATIVE STRENGTH / SCENARIOS / WHY ============ */
+const SECTOR_MAP={RELIANCE:'Energy',ONGC:'Energy',BPCL:'Energy',IOC:'Energy',GAIL:'Energy',COALINDIA:'Energy',NTPC:'Power',POWERGRID:'Power',TATAPOWER:'Power',
+HDFCBANK:'Banking',ICICIBANK:'Banking',SBIN:'Banking',AXISBANK:'Banking',KOTAKBANK:'Banking',INDUSINDBK:'Banking',BANKBARODA:'Banking',PNB:'Banking',
+BAJFINANCE:'Financials',BAJAJFINSV:'Financials',HDFCLIFE:'Financials',SBILIFE:'Financials',
+TCS:'IT',INFY:'IT',WIPRO:'IT',HCLTECH:'IT',TECHM:'IT',LTIM:'IT',
+MARUTI:'Auto',TATAMOTORS:'Auto','M&M':'Auto','BAJAJ-AUTO':'Auto',EICHERMOT:'Auto',HEROMOTOCO:'Auto',
+SUNPHARMA:'Pharma',DRREDDY:'Pharma',CIPLA:'Pharma',DIVISLAB:'Pharma',
+HINDUNILVR:'FMCG',ITC:'FMCG',NESTLEIND:'FMCG',BRITANNIA:'FMCG',JUBLFOOD:'Consumer',TITAN:'Consumer',
+TATASTEEL:'Metals',JSWSTEEL:'Metals',HINDALCO:'Metals',VEDL:'Metals',LT:'Infra',ADANIPORTS:'Infra'};
+function getSectorMap(){ try{ return {...SECTOR_MAP,...JSON.parse(localStorage.getItem('msi_sectors')||'{}')}; }catch(e){ return {...SECTOR_MAP}; } }
+function retN(b,n){ const i=b.length-1; return i>=n ? (b[i].close/b[i-n].close-1)*100 : null; }
+function benchRets(){
+  for(const k of ['NIFTY','NIFTY50','NIFTY 50','NIFTY_50','^NSEI']){ const b=DB[k]&&DB[k].bars; if(b&&b.length>21) return {1:retN(b,1),5:retN(b,5),20:retN(b,20)}; }
+  const t=window.MSI_NIFTY; return (t&&t.chgP!=null)?{1:t.chgP}:null;
+}
+function breadthStats(){
+  const o={n:0,up:0,above:0,above5:0,n5:0};
+  for(const s in DB){ const b=DB[s].bars; if(b.length<26||/^NIFTY/i.test(s)||s==='^NSEI') continue;
+    const cl=b.map(x=>x.close), e=IND.ema(cl,20), i=cl.length-1; o.n++;
+    if(cl[i]>cl[i-1]) o.up++; if(cl[i]>e[i]) o.above++;
+    if(e[i-5]!=null){ o.n5++; if(cl[i-5]>e[i-5]) o.above5++; } }
+  return o;
+}
+const fP=v=>v==null?'-':(v>=0?'+':'')+v.toFixed(1)+'%';
+const cP=v=>v==null?'':v>=0?'up':'down';
+
+function renderSectorRS(sym,bars,calc,li){
+  const map=getSectorMap(), sector=map[sym]||null;
+  const sectors=[...new Set(Object.values(map))].sort();
+  const mine={1:retN(bars,1),5:retN(bars,5),20:retN(bars,20)};
+  const peers=Object.keys(DB).filter(s=>s!==sym&&sector&&map[s]===sector&&DB[s].bars.length>21)
+    .map(s=>({s,1:retN(DB[s].bars,1),5:retN(DB[s].bars,5),20:retN(DB[s].bars,20)}));
+  const avg=n=>{ const v=peers.map(p=>p[n]).filter(x=>x!=null); return v.length?v.reduce((a,b)=>a+b,0)/v.length:null; };
+  const sec={1:avg(1),5:avg(5),20:avg(20)}, nif=benchRets()||{};
+  const lab=(v,t)=>v==null?['n','No data']:v>t?['g','Bullish']:v<-t?['r','Bearish']:['y','Neutral'];
+  const sg=lastSignal?lastSignal.signal:'';
+  const stockL=sg.includes('BUY')?['g','Bullish']:sg.includes('SELL')?['r','Bearish']:['y','Neutral'];
+  const secL=lab(sec[20]!=null?sec[20]:sec[5],1.5);
+  const nifL=nif[20]!=null?lab(nif[20],1.5):lab(nif[1],0.3);
+  const br=breadthStats(); let brL=['n','Load 5+ symbols'], brTxt='';
+  if(br.n>=5){
+    const pa=br.above/br.n*100, pa5=br.n5?br.above5/br.n5*100:null;
+    const trend=pa5==null?'':pa>pa5+5?'improving':pa<pa5-5?'weakening':'flat';
+    brL=[pa>=60?'g':pa<=40?'r':'y', (pa>=60?'Bullish':pa<=40?'Bearish':'Neutral')+(trend?', '+trend:'')];
+    brTxt=`${Math.round(pa)}% above EMA20, ${Math.round(br.up/br.n*100)}% up today (${br.n} symbols)`;
+  }
+  const row=(a,[c,t],x)=>`<div class="statusline"><span>${a}${x?`<br><span class="muted">${x}</span>`:''}</span><span class="tag ${c}">${t}</span></div>`;
+  document.getElementById('sectorChain').innerHTML=
+    row('Stock → '+sym,stockL,'App signal: '+(sg||'n/a'))+
+    row('Sector → '+(sector||'not set'),sector?secL:['n','Pick sector'],sector?(peers.length?`Avg of ${peers.length} loaded peer(s), 20d ${fP(sec[20])}`:'No loaded peers in this sector'):'')+
+    row('NIFTY',nifL,nif[20]!=null?`20d ${fP(nif[20])}`:nif[1]!=null?`Today ${fP(nif[1])} (live ticker)`:'No NIFTY data (add token or NIFTY CSV)')+
+    row('Market breadth',brL,brTxt);
+
+  const key=[20,5,1].find(n=>mine[n]!=null&&(sec[n]!=null||nif[n]!=null));
+  let verdict='Not enough comparison data.';
+  if(key){ const vs=[]; if(sec[key]!=null) vs.push(['sector',mine[key]-sec[key]]); if(nif[key]!=null) vs.push(['NIFTY',mine[key]-nif[key]]);
+    const out=vs.filter(v=>v[1]>0).map(v=>v[0]), under=vs.filter(v=>v[1]<=0).map(v=>v[0]);
+    verdict=`${key}d basis: `+(out.length?`outperforming ${out.join(' and ')}`:'')+(out.length&&under.length?', ':'')+(under.length?`underperforming ${under.join(' and ')}`:'')+'.'; }
+  const rs=(a,b)=>(a!=null&&b!=null)?`<span class="${cP(a-b)}">${fP(a-b)}</span>`:'-';
+  const tbl=`<table><thead><tr><th>Period</th><th>Stock</th><th>Sector</th><th>NIFTY</th><th>vs Sec</th><th>vs NIFTY</th></tr></thead><tbody>`+
+    [1,5,20].map(n=>`<tr><td>${n}d</td><td>${fP(mine[n])}</td><td>${fP(sec[n])}</td><td>${fP(nif[n])}</td><td>${rs(mine[n],sec[n])}</td><td>${rs(mine[n],nif[n])}</td></tr>`).join('')+`</tbody></table>`;
+  const ptbl=peers.length?`<table style="margin-top:10px"><thead><tr><th>Peer</th><th>1d</th><th>5d</th><th>20d</th></tr></thead><tbody>`+
+    peers.map(p=>`<tr><td>${p.s}</td><td>${fP(p[1])}</td><td>${fP(p[5])}</td><td>${fP(p[20])}</td></tr>`).join('')+`</tbody></table>`:'';
+  document.getElementById('sectorRS').innerHTML=
+    `<div class="row" style="margin-bottom:10px"><select id="sectorPick"><option value="">Sector: not set</option>${sectors.map(s=>`<option ${s===sector?'selected':''}>${s}</option>`).join('')}</select></div>`+
+    `<div style="margin-bottom:8px;font-weight:600">${verdict}</div>`+tbl+ptbl;
+  document.getElementById('sectorPick').onchange=e=>{
+    let m={}; try{ m=JSON.parse(localStorage.getItem('msi_sectors')||'{}'); }catch(x){}
+    if(e.target.value) m[sym]=e.target.value; else delete m[sym];
+    localStorage.setItem('msi_sectors',JSON.stringify(m)); renderSectorRS(sym,bars,calc,li);
+  };
+  window.MSI_RS=`Sector/RS (calculated): sector=${sector||'not set'}; stock returns 1d/5d/20d ${fP(mine[1])}/${fP(mine[5])}/${fP(mine[20])}; sector avg ${fP(sec[1])}/${fP(sec[5])}/${fP(sec[20])}; NIFTY ${fP(nif[1])}/${fP(nif[5])}/${fP(nif[20])}; chain: stock ${stockL[1]}, sector ${secL[1]}, NIFTY ${nifL[1]}, breadth ${brL[1]} ${brTxt}; RS verdict: ${verdict}`;
+  window.MSI_EXTRA=window.MSI_RS;
+}
+
+function renderScenarios(sym,bars,calc,li,ctx){
+  const el=document.getElementById('scenPanel');
+  if(li<25||calc.atr[li]==null||calc.ema50[li]==null){ el.innerHTML='<div class="muted">Need ~50 bars for scenarios.</div>'; return; }
+  const c=bars[li].close, atr=calc.atr[li], e20=calc.ema20[li], e50=calc.ema50[li], rsi=calc.rsi[li], cmf=calc.cmf[li];
+  const {highs,lows}=swingLevels(bars);
+  const res=highs.filter(h=>h>c).sort((a,b)=>a-b)[0]??Math.max(...bars.slice(-20).map(b=>b.high));
+  const sup=lows.filter(l=>l<c).sort((a,b)=>b-a)[0]??Math.min(...bars.slice(-20).map(b=>b.low));
+  const vx=calc.vol20[li]?bars[li].volume/calc.vol20[li]:null;
+  const obvUp=calc.obv[li]>calc.obv[Math.max(0,li-10)];
+  const up=e20>e50, f=v=>'₹'+v.toFixed(2);
+  const S=[
+    {n:'A — Continuation',cls:'g',conds:[[up,'EMA20 above EMA50'],[c>e20,'Close above EMA20'],[rsi>=50&&rsi<=70,`RSI ${fmt(rsi)} in 50–70`],[obvUp,'OBV rising'],[vx!=null&&vx>=1.2,`Volume ${vx?vx.toFixed(2):'-'}x (needs 1.2x+)`]],
+      trig:`Close above ${f(res)} on volume of 1.2x+`,inv:`Close below ${f(e20)} (EMA20)`},
+    {n:'B — Pullback',cls:'y',conds:[[up,'Uptrend intact (EMA20 > EMA50)'],[Math.abs(c-e20)<=atr,`Within 1 ATR of EMA20 (${f(e20)})`],[rsi>=40&&rsi<=55,`RSI ${fmt(rsi)} cooled to 40–55`],[vx!=null&&vx<1,'Volume below 20d average'],[c>sup,`Holding above support ${f(sup)}`]],
+      trig:`Dip toward ${f(e20)}–${f(sup)} holds, then close above today's high ${f(bars[li].high)}`,inv:`Close below ${f(sup)}`},
+    {n:'C — Breakdown',cls:'r',conds:[[c<e20,'Close below EMA20'],[!up||(ctx.ms&&ctx.ms.chochDir==='bearish'),'Downtrend or bearish CHOCH'],[cmf!=null&&cmf<0,`CMF ${fmt(cmf,3)} negative`],[!obvUp,'OBV falling'],[c<=sup+0.5*atr,`Close within 0.5 ATR of support ${f(sup)} or below`]],
+      trig:`Close below ${f(sup)} on volume of 1.2x+`,inv:`Close back above ${f(e20)} (EMA20)`}
+  ];
+  S.forEach(s=>s.met=s.conds.filter(x=>x[0]).length);
+  const best=Math.max(...S.map(s=>s.met));
+  el.innerHTML=S.map(s=>`<div class="card" style="background:var(--card2);${s.met===best?'border-color:var(--orange)':''}">
+    <div class="statusline" style="border:none"><b>${s.n}</b><span class="tag ${s.cls}">${s.met}/${s.conds.length} met${s.met===best?' · best-supported now':''}</span></div>
+    ${s.conds.map(([ok,t])=>`<div style="font-size:13px">${ok?'✓':'✗'} ${t}</div>`).join('')}
+    <div class="kv" style="margin-top:6px"><span>Trigger</span><span style="text-align:right">${s.trig}</span></div>
+    <div class="kv"><span>Invalidated if</span><span style="text-align:right">${s.inv}</span></div></div>`).join('');
+  window.MSI_EXTRA=(window.MSI_RS||'')+'\nScenarios (calculated): '+S.map(s=>`${s.n}: ${s.met}/${s.conds.length} met; trigger: ${s.trig}; invalidated if: ${s.inv}`).join(' | ');
+}
+
+async function askAI(task,outEl){
+  const key=document.getElementById('groqKey').value.trim(), model=document.getElementById('groqModel').value;
+  if(!currentSymbol) return;
+  if(!key){ outEl.innerHTML='<div class="muted">Add your Groq key in the Ask AI tab for the AI explanation.</div>'+(lastSignal?`<div style="margin-top:6px">${lastSignal.reasons.join('<br>')}</div>`:''); return; }
+  outEl.innerHTML='<div class="muted">Thinking...</div>';
+  const sys=`You explain the output of a stock analysis app. Use ONLY the DATA below. Never add facts, numbers, levels or news that are not in DATA; if something was not calculated, say so. Be concise, give no personalised advice, and note this is not investment advice.\n\nDATA:\n${buildContext()}`;
+  try{
+    const r=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+      body:JSON.stringify({model,messages:[{role:'system',content:sys},{role:'user',content:task}]})});
+    const d=await r.json();
+    outEl.innerHTML=escapeHtml(d.choices?.[0]?.message?.content||('Error: '+(d.error?.message||'no response')));
+  }catch(e){ outEl.innerHTML='Request failed: '+escapeHtml(e.message); }
+}
+function addWhyButton(panel){
+  const d=document.createElement('div');
+  d.innerHTML='<button class="secondary" style="margin-top:8px">Why?</button><div style="margin-top:8px;font-size:13px;line-height:1.5;white-space:pre-wrap"></div>';
+  panel.appendChild(d);
+  d.querySelector('button').onclick=()=>askAI(`Why is this setup appearing? Explain why the app shows "${lastSignal?lastSignal.signal:''}" for ${currentSymbol}. Cite each calculated item that supports it and any that argues against it.`,d.querySelector('div'));
+}
+document.getElementById('scenAiBtn').addEventListener('click',()=>askAI('Review the three scenarios (A continuation, B pullback, C breakdown). Which has the most calculated support today, what would confirm or invalidate each, and what is not calculated?',document.getElementById('scenAiOut')));
+
+/* ============ TABS ============ */
+document.querySelectorAll('.tabbtn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tabbtn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tabpane').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+    if(btn.dataset.tab==='ichi') drawIchiChart();
+  });
+});
+
+if(Object.keys(DB).length){ document.getElementById('loadStatus').textContent = `${Object.keys(DB).length} symbol(s) already stored locally.`; }
+</script>
+</body>
+</html>
