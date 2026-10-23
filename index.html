@@ -235,6 +235,17 @@
       </div>
 
   <section class="card" id="smartScannerCard" style="display:none" aria-live="polite">
+    <div style="margin-bottom:10px">
+      <div class="muted" style="font-weight:700;margin-bottom:7px">OPPORTUNITY DIRECTION</div>
+      <div class="tabbar" id="opportunityFilters" aria-label="Filter scanner by trade direction" style="margin-bottom:6px">
+        <button class="tabbtn active" type="button" data-scan-filter="ALL">All opportunities</button>
+        <button class="tabbtn" type="button" data-scan-filter="LONG">01 · Bullish (LONG)</button>
+        <button class="tabbtn" type="button" data-scan-filter="SHORT">02 · Bearish (SHORT)</button>
+        <button class="tabbtn" type="button" data-scan-filter="WAIT">03 · Neutral / WAIT</button>
+        <button class="tabbtn" type="button" data-scan-filter="RISK" data-jump="tab-riskmanage">04 · Risk Management</button>
+      </div>
+      <div class="footNote">LONG looks for bullish trend + model support. SHORT looks for bearish trend + model support. WAIT is used when signals conflict or history is insufficient. These are research filters, not trade instructions.</div>
+    </div>
     <div class="statusline" style="border:none;padding:0;align-items:flex-start">
       <div><h3 style="margin-bottom:4px;color:var(--text)">MARAK SMART STOCK SCANNER</h3><div class="muted">Scans only symbols and historical candles loaded from your CSV files. Other live-data modules are separate and are not used to populate this scanner.</div></div>
       <button class="secondary" id="scannerRefresh" style="font-size:12px;padding:6px 9px">↻ Rescan</button>
@@ -515,9 +526,10 @@
         <div class="settingsGrid" style="margin-top:10px">
           <label>Account capital (₹)<input id="riskCapital" type="number" min="0" step="1000" value="100000"></label>
           <label>Risk per trade (%)<input id="riskPercent" type="number" min="0.01" max="100" step="0.1" value="1"></label>
+          <label>Trade direction<select id="riskSide"><option value="LONG">LONG — buy first</option><option value="SHORT">SHORT — sell first</option></select></label>
           <label>Entry price (₹)<input id="riskEntry" type="number" min="0" step="0.05" placeholder="e.g. 250"></label>
-          <label>Stop-loss price (₹)<input id="riskStop" type="number" min="0" step="0.05" placeholder="e.g. 240"></label>
-          <label>Target price (₹, optional)<input id="riskTarget" type="number" min="0" step="0.05" placeholder="e.g. 275"></label>
+          <label>Stop-loss price (₹)<input id="riskStop" type="number" min="0" step="0.05" placeholder="LONG: below entry · SHORT: above entry"></label>
+          <label>Target price (₹, optional)<input id="riskTarget" type="number" min="0" step="0.05" placeholder="LONG: above entry · SHORT: below entry"></label>
         </div>
         <button id="riskCalcBtn" style="margin-top:10px" type="button">Calculate position size</button>
         <div id="riskCalcResult" class="footNote" aria-live="polite" style="margin-top:10px">Enter an entry and stop-loss price, then calculate.</div>
@@ -2822,6 +2834,7 @@ function runDirectionModel(bars,horizon=1){
   const model=trainLogistic(rows,MSI_ML_EPOCHS,MSI_ML_LR), x=currentMLFeatures(bars);if(!model||!x)return {ready:false,n:rows.length,horizon};
   const p=model.predict(x);return {ready:true,n:rows.length,p,horizon};
 }
+let msiScanFilter='ALL';
 async function renderSmartScanner(){
   const button=byId('scannerRefresh');if(button){button.disabled=true;button.textContent='Scanning…';}
   const card=byId('smartScannerCard'), el=byId('smartScannerBody');
@@ -2840,17 +2853,23 @@ async function renderSmartScanner(){
     const calc=bars.length>=15?computeAll(bars):null, rsi=calc&&calc.rsi[calc.rsi.length-1];
     const model=runDirectionModel(bars), p=model.ready?model.p:null;
     const trend=ema20>ema50?'Upward':ema20<ema50?'Downward':'Sideways';
-    let label='Mixed / wait', cls='';
-    if(p!=null){if(p>=0.55&&trend==='Upward'&&(rsi==null||rsi<75)){label='Bullish setup';cls='up';}else if(p<=0.40&&trend==='Downward'){label='Bearish setup';cls='down';}}
-    else if(trend==='Upward'&&(rsi==null||rsi<70)){label='Trend positive · more data needed';cls='up';}
-    else if(trend==='Downward'){label='Trend negative · more data needed';cls='down';}
-    const row={sym,bars:bars.length,last,change,trend,rsi,p,label,cls,sort:p==null?(trend==='Upward'?0.55:trend==='Downward'?0.45:0.5):p};msiScannerCache.set(sym,{sig,row});rows.push(row);
+    let direction='WAIT',label='Mixed / wait',cls='';
+    if(p!=null&&p>=0.55&&trend==='Upward'&&(rsi==null||rsi<75)){direction='LONG';label='Bullish setup · LONG candidate';cls='up';}
+    else if(p!=null&&p<=0.40&&trend==='Downward'){direction='SHORT';label='Bearish setup · SHORT candidate';cls='down';}
+    else if(p==null&&trend==='Upward'&&(rsi==null||rsi<70)){label='Uptrend · more data needed';cls='up';}
+    else if(p==null&&trend==='Downward'){label='Downtrend · more data needed';cls='down';}
+    else if(p!=null&&(p>=0.45&&p<=0.55||trend==='Sideways')){label='Neutral / conflicting evidence';}
+    const row={sym,bars:bars.length,last,change,trend,rsi,p,direction,label,cls,sort:direction==='LONG'?(p??0.55):direction==='SHORT'?(1-(p??0.5)):(p==null?0.5:Math.abs(p-0.5))};msiScannerCache.set(sym,{sig,row});rows.push(row);
     if(scanIdx<symbols.length-1)await new Promise(resolve=>setTimeout(resolve,0));
   }
-  rows.sort((a,b)=>b.sort-a.sort);
+  const filtered=rows.filter(r=>msiScanFilter==='ALL'||r.direction===msiScanFilter);
+  filtered.sort((a,b)=>b.sort-a.sort);
   const fmtPct=v=>v==null?'—':(v>=0?'+':'')+v.toFixed(2)+'%';
-  el.innerHTML='<div class="muted" style="margin-bottom:8px">'+rows.length+' loaded symbol(s) scanned. Select a row to open its full analysis.</div>'+
-    '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:640px"><thead><tr style="text-align:left;border-bottom:1px solid var(--border)"><th style="padding:8px 5px">Stock</th><th style="padding:8px 5px">Last close</th><th style="padding:8px 5px">Day change</th><th style="padding:8px 5px">Trend</th><th style="padding:8px 5px">Up probability</th><th style="padding:8px 5px">Signal</th></tr></thead><tbody>'+rows.map(r=>'<tr data-scan-symbol="'+escH(r.sym)+'" style="border-bottom:1px solid var(--border);cursor:pointer"><td style="padding:9px 5px;font-weight:700">'+escH(r.sym)+'<div class="muted">'+r.bars+' candles</div></td><td style="padding:9px 5px">₹'+Number(r.last.close).toLocaleString('en-IN',{maximumFractionDigits:2})+'</td><td class="'+(r.change>=0?'up':'down')+'" style="padding:9px 5px">'+fmtPct(r.change)+'</td><td style="padding:9px 5px">'+r.trend+(r.rsi==null?'':' · RSI '+r.rsi.toFixed(0))+'</td><td style="padding:9px 5px">'+(r.p==null?'More data needed':(r.p*100).toFixed(0)+'%')+'</td><td class="'+r.cls+'" style="padding:9px 5px">'+r.label+'</td></tr>').join('')+'</tbody></table></div>';
+  const countDir=d=>rows.filter(r=>r.direction===d).length;
+  const filterSummary=`<div class="grid3" style="margin:8px 0"><div class="card" style="margin:0;padding:9px"><b class="up">LONG</b><div style="font-size:20px;font-weight:700">${countDir('LONG')}</div><div class="muted">Bullish candidates</div></div><div class="card" style="margin:0;padding:9px"><b class="down">SHORT</b><div style="font-size:20px;font-weight:700">${countDir('SHORT')}</div><div class="muted">Bearish candidates</div></div><div class="card" style="margin:0;padding:9px"><b>WAIT</b><div style="font-size:20px;font-weight:700">${countDir('WAIT')}</div><div class="muted">Neutral / insufficient evidence</div></div></div>`;
+  el.innerHTML=filterSummary+'<div class="muted" style="margin-bottom:8px">Showing '+filtered.length+' of '+rows.length+' loaded symbol(s). Tap a row to open its full analysis.</div>'+
+    (filtered.length?'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:700px"><thead><tr style="text-align:left;border-bottom:1px solid var(--border)"><th style="padding:8px 5px">Stock</th><th style="padding:8px 5px">Last close</th><th style="padding:8px 5px">Day change</th><th style="padding:8px 5px">Trend</th><th style="padding:8px 5px">Up / down estimate</th><th style="padding:8px 5px">Opportunity</th></tr></thead><tbody>'+filtered.map(r=>'<tr data-scan-symbol="'+escH(r.sym)+'" style="border-bottom:1px solid var(--border);cursor:pointer"><td style="padding:9px 5px;font-weight:700">'+escH(r.sym)+'<div class="muted">'+r.bars+' candles</div></td><td style="padding:9px 5px">₹'+Number(r.last.close).toLocaleString('en-IN',{maximumFractionDigits:2})+'</td><td class="'+(r.change>=0?'up':'down')+'" style="padding:9px 5px">'+fmtPct(r.change)+'</td><td style="padding:9px 5px">'+r.trend+(r.rsi==null?'':' · RSI '+r.rsi.toFixed(0))+'</td><td style="padding:9px 5px">'+(r.p==null?'More data needed':(r.p*100).toFixed(0)+'% up / '+((1-r.p)*100).toFixed(0)+'% down')+'</td><td class="'+r.cls+'" style="padding:9px 5px">'+r.label+'</td></tr>').join('')+'</tbody></table></div>':'<div class="card"><b>No symbols match this filter.</b><div class="muted">Try All opportunities or upload more historical candles. No signal is forced when evidence is insufficient.</div></div>')+
+    '<div class="footNote">The “down estimate” is 1 minus the model’s estimated up probability, not a separately calibrated short-profit probability. Short candidates need independent validation and may be subject to intraday, margin, liquidity and settlement restrictions.</div>';
   if(button){button.disabled=false;button.textContent='↻ Rescan';}
 }
 byId('smartScannerBody')?.addEventListener('click',e=>{const row=e.target.closest('[data-scan-symbol]');if(row){const sym=row.getAttribute('data-scan-symbol');if(DB[sym]){byId('symbolSelect').value=sym;currentSymbol=sym;loadSymbol(sym);window.scrollTo({top:0,behavior:'smooth'});}}});
@@ -2861,6 +2880,11 @@ function prepareSmartScanner(){
   card.style.display=n?'block':'none';
   if(n)el.innerHTML='<div class="muted">'+n+' loaded symbol(s) available. Tap <b>Rescan</b> to run the model scan. It will not run automatically during import, helping lower-end phones stay responsive.</div>';
 }
+document.querySelectorAll('[data-scan-filter]').forEach(btn=>btn.addEventListener('click',()=>{
+  const filter=btn.dataset.scanFilter;
+  if(filter==='RISK'){const pane=byId('tab-riskmanage');if(pane){document.querySelectorAll('.tabpane').forEach(p=>p.classList.remove('active'));pane.classList.add('active');document.querySelectorAll('#analysisTabbar .tabbtn').forEach(b=>b.classList.toggle('active',b.dataset.tab==='riskmanage'));pane.scrollIntoView({behavior:'smooth',block:'start'});}return;}
+  msiScanFilter=filter;document.querySelectorAll('[data-scan-filter]').forEach(b=>b.classList.toggle('active',b===btn));renderSmartScanner();
+}));
 byId('scannerRefresh')?.addEventListener('click',renderSmartScanner);
 prepareSmartScanner();
 
@@ -3139,12 +3163,15 @@ document.querySelectorAll('[data-jump]').forEach(btn=>btn.addEventListener('clic
 const riskCalcBtn=document.getElementById('riskCalcBtn');
 if(riskCalcBtn) riskCalcBtn.addEventListener('click',()=>{
   const cap=Number(document.getElementById('riskCapital').value), pct=Number(document.getElementById('riskPercent').value);
+  const side=document.getElementById('riskSide')?.value||'LONG';
   const entry=Number(document.getElementById('riskEntry').value), stop=Number(document.getElementById('riskStop').value), target=Number(document.getElementById('riskTarget').value);
   const out=document.getElementById('riskCalcResult');
-  if(!(cap>0&&pct>0&&pct<=100&&entry>0&&stop>0&&entry!==stop)) {out.textContent='Please enter positive capital, risk percentage (up to 100%), entry and a different stop-loss price.';return;}
+  const stopValid=side==='LONG'?stop<entry:stop>entry;
+  const targetValid=target>0&&(side==='LONG'?target>entry:target<entry);
+  if(!(cap>0&&pct>0&&pct<=100&&entry>0&&stop>0&&stopValid)) {out.textContent=`Please enter positive capital, a valid risk percentage, and a ${side==='LONG'?'stop-loss below':'stop-loss above'} the entry price for this ${side} setup.`;return;}
   const perShare=Math.abs(entry-stop), riskBudget=cap*pct/100, shares=Math.floor(riskBudget/perShare), actualRisk=shares*perShare;
-  const rr=target>0&&((entry>stop&&target>entry)||(entry<stop&&target<entry))?Math.abs(target-entry)/perShare:null;
-  out.innerHTML=`<div><b>Maximum planned risk budget:</b> ₹${riskBudget.toLocaleString('en-IN',{maximumFractionDigits:2})}</div><div><b>Risk per share:</b> ₹${perShare.toLocaleString('en-IN',{maximumFractionDigits:2})}</div><div><b>Indicative quantity:</b> ${shares.toLocaleString('en-IN')} share(s)</div><div><b>Approx. position value:</b> ₹${(shares*entry).toLocaleString('en-IN',{maximumFractionDigits:2})}</div><div><b>Planned loss at stop:</b> ₹${actualRisk.toLocaleString('en-IN',{maximumFractionDigits:2})}</div>${rr!==null?`<div><b>Reward:risk to target:</b> ${rr.toFixed(2)}:1</div>`:(target>0?'<div>Target direction does not match the entry/stop setup; reward:risk not shown.</div>':'')}`;
+  const rr=targetValid?Math.abs(target-entry)/perShare:null;
+  out.innerHTML=`<div><b>Trade direction:</b> ${side==='LONG'?'LONG (buy first)':'SHORT (sell first)'}</div><div><b>Maximum planned risk budget:</b> ₹${riskBudget.toLocaleString('en-IN',{maximumFractionDigits:2})}</div><div><b>Risk per share:</b> ₹${perShare.toLocaleString('en-IN',{maximumFractionDigits:2})}</div><div><b>Indicative quantity:</b> ${shares.toLocaleString('en-IN')} share(s)</div><div><b>Approx. position value:</b> ₹${(shares*entry).toLocaleString('en-IN',{maximumFractionDigits:2})}</div><div><b>Planned loss at stop:</b> ₹${actualRisk.toLocaleString('en-IN',{maximumFractionDigits:2})}</div>${rr!==null?`<div><b>Reward:risk to target:</b> ${rr.toFixed(2)}:1</div>`:(target>0?'<div>Target direction does not match this trade side; reward:risk not shown.</div>':'')}`;
 });
 
 if(Object.keys(DB).length){ document.getElementById('loadStatus').textContent = `${Object.keys(DB).length} symbol(s) already stored locally.`; }
