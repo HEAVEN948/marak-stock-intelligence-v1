@@ -3425,13 +3425,13 @@ if(Object.keys(DB).length){ document.getElementById('loadStatus').textContent = 
   if(!canvas) return;
   const ctx=canvas.getContext('2d',{alpha:false});
   if(!ctx) return;
-  let w=0,h=0,dpr=1,pts=[],raf=0,last=0;\n  const pointer={x:0,y:0,tx:0,ty:0,active:false};
+  let w=0,h=0,dpr=1,pts=[],raf=0,last=0;
   const reduced=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   function resize(){
     dpr=Math.min(window.devicePixelRatio||1,1.6);w=window.innerWidth;h=window.innerHeight;
     canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);
     canvas.style.width=w+'px';canvas.style.height=h+'px';ctx.setTransform(dpr,0,0,dpr,0,0);
-    const count=Math.max(46,Math.min(150,Math.round(w*h/(w<600?9800:7600))));
+    const count=Math.max(58,Math.min(150,Math.round(w*h/7600)));
     pts=Array.from({length:count},(_,i)=>({x:Math.random()*w,y:Math.random()*h,z:.25+Math.random()*.75,phase:Math.random()*Math.PI*2,speed:.45+Math.random()*1.05,r:1.15+Math.random()*2.0,hue:[0,3,7,352,355][i%5]}));
     draw(0);
   }
