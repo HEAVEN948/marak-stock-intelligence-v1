@@ -1,6 +1,6 @@
 // Marak Stock Intelligence — service worker
 // Bump CACHE_VERSION whenever index.html or this worker changes.
-const CACHE_VERSION = 'msi-v44-sentiment-fix';
+const CACHE_VERSION = 'msi-v46-walkforward-horizons';
 const CORE_ASSETS = ['./', './index.html'];
 const OPTIONAL_ASSETS = ['./manifest.json', './icon-192.png', './icon-512.png', './icon-512-maskable.png'];
 
