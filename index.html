@@ -255,9 +255,9 @@
     <div class="sectionFinder">
       <label for="sectionSearch">FIND A TOOL</label>
       <input id="sectionSearch" type="search" autocomplete="off" placeholder="Search: liquidity, BOS, Smart Money, Ichimoku…" aria-label="Search analysis sections and tools">
-      <div id="sectionSearchStatus" aria-live="polite">11 sections · follow the numbered order, or search by tool name.</div>
+      <div id="sectionSearchStatus" aria-live="polite">16 sections · follow the numbered order, or search by tool name.</div>
     </div>
-    <p class="serial-guide">ANALYSIS ORDER: 01 Structure → 02 Smart Money → 03 Ichimoku / Bollinger Bands → 04 Sector & Relative Strength → 05 Scenarios → 06 Stock DNA → 07 Psychology → 08 Why It's Moving → 09 Pattern History → 10 Options / Institutional → 11 Ask AI.</p>
+    <p class="serial-guide">ANALYSIS ORDER: 01 Structure → 02 Smart Money → 03 Ichimoku / Bollinger Bands → 04 Sector & Relative Strength → 05 Scenarios → 06 Stock DNA → 07 Psychology → 08 Why It's Moving → 09 Pattern History → 10 Options / Institutional → 11 Ask AI → 12 ML Predictions → 13 Backtesting & Validation → 14 News & Sentiment → 15 CSV Scanner → 16 Risk Management.</p>
     <div class="tabbar" id="analysisTabbar" aria-label="Numbered analysis sections">
       <button class="tabbtn active" data-tab="structure" data-serial="01">01 · Structure</button>
       <button class="tabbtn" data-tab="smartmoney" data-serial="02">02 · Smart Money</button>
@@ -270,6 +270,11 @@
       <button class="tabbtn" data-tab="pattern" data-serial="09">09 · Pattern history</button>
       <button class="tabbtn" data-tab="options" data-serial="10">10 · Options / Institutional</button>
       <button class="tabbtn" data-tab="ai" data-serial="11">11 · Ask AI</button>
+      <button class="tabbtn" data-tab="mlpred" data-serial="12">12 · ML Predictions</button>
+      <button class="tabbtn" data-tab="backtest" data-serial="13">13 · Backtesting</button>
+      <button class="tabbtn" data-tab="sentiment" data-serial="14">14 · News & Sentiment</button>
+      <button class="tabbtn" data-tab="csvscanner" data-serial="15">15 · CSV Scanner</button>
+      <button class="tabbtn" data-tab="riskmanage" data-serial="16">16 · Risk Management</button>
     </div>
 
     <!-- STRUCTURE -->
@@ -478,6 +483,51 @@
           <button id="chatSendBtn">Ask</button>
         </div>
         <div class="footNote">The AI answers only from the computed structure/DNA/smart-money/options data currently loaded for this stock. It does not browse the web, and if data is missing (for example no Upstox connection) it should say so rather than invent numbers.</div>
+      </div>
+    </div>
+
+    <!-- NEW FEATURES, KEPT IN THE SAME NUMBERED SECTION STYLE -->
+    <div class="tabpane" id="tab-mlpred">
+      <div class="card"><h3>12 · ML Predictions</h3>
+        <p class="muted">Experimental statistical/ML direction estimates for the selected stock, using the historical candles loaded from your CSV. The model shows 1-, 5- and 20-session horizons when sufficient history is available.</p>
+        <div class="footNote">Predictions are estimates, not calibrated probabilities or guaranteed outcomes. More historical rows do not guarantee predictive value.</div>
+        <button class="secondary" type="button" data-jump="intelDashboard">Open live ML prediction panel ↑</button>
+      </div>
+    </div>
+    <div class="tabpane" id="tab-backtest">
+      <div class="card"><h3>13 · Backtesting & Validation</h3>
+        <p class="muted">Walk-forward historical evaluation runs automatically for the selected stock when enough CSV history is available. The live panel reports sample size and available performance metrics across 1-, 5- and 20-session horizons.</p>
+        <div class="footNote">Historical results can be noisy and may not reflect executable fills. Cost assumptions are illustrative; taxes, liquidity, slippage and market impact may differ.</div>
+        <button class="secondary" type="button" data-jump="intelDashboard">Open automatic validation results ↑</button>
+      </div>
+    </div>
+    <div class="tabpane" id="tab-sentiment">
+      <div class="card"><h3>14 · News & Sentiment</h3>
+        <p class="muted">Recent headline lookup and keyword-based sentiment are shown for the selected stock in the Intelligence Dashboard. News availability and relevance can vary by symbol.</p>
+        <div class="footNote">Sentiment is a simple text signal, not a verified assessment of company fundamentals. Check original reporting before acting.</div>
+        <button class="secondary" type="button" data-jump="intelDashboard">Open live headline sentiment ↑</button>
+      </div>
+    </div>
+    <div class="tabpane" id="tab-csvscanner">
+      <div class="card"><h3>15 · CSV Scanner</h3>
+        <p class="muted">Upload one or more OHLCV CSV files using the “Load stock data” box at the top. The scanner only ranks symbols present in the uploaded data; it does not silently add the whole NSE universe.</p>
+        <div class="footNote">Expected fields include Date, Open, High, Low, Close and Volume. Header detection accepts common variants. Add more historical sessions for stronger analysis.</div>
+        <div class="row"><button class="secondary" type="button" data-jump="csvFile">Go to CSV upload ↑</button><button class="secondary" type="button" data-jump="smartScannerCard">Open Smart Stock Scanner ↑</button></div>
+      </div>
+    </div>
+    <div class="tabpane" id="tab-riskmanage">
+      <div class="card"><h3>16 · Risk Management Calculator</h3>
+        <p class="muted">Estimate a position size from your capital, risk budget and proposed entry/stop prices. This is a planning calculator, not a trade recommendation.</p>
+        <div class="settingsGrid" style="margin-top:10px">
+          <label>Account capital (₹)<input id="riskCapital" type="number" min="0" step="1000" value="100000"></label>
+          <label>Risk per trade (%)<input id="riskPercent" type="number" min="0.01" max="100" step="0.1" value="1"></label>
+          <label>Entry price (₹)<input id="riskEntry" type="number" min="0" step="0.05" placeholder="e.g. 250"></label>
+          <label>Stop-loss price (₹)<input id="riskStop" type="number" min="0" step="0.05" placeholder="e.g. 240"></label>
+          <label>Target price (₹, optional)<input id="riskTarget" type="number" min="0" step="0.05" placeholder="e.g. 275"></label>
+        </div>
+        <button id="riskCalcBtn" style="margin-top:10px" type="button">Calculate position size</button>
+        <div id="riskCalcResult" class="footNote" aria-live="polite" style="margin-top:10px">Enter an entry and stop-loss price, then calculate.</div>
+        <div class="footNote">The estimate excludes brokerage, taxes, gaps, slippage, liquidity and lot-size constraints. A stop-loss does not guarantee the exit price.</div>
       </div>
     </div>
 
@@ -3096,7 +3146,7 @@ if(sectionSearch){
       btn.hidden=!match;
       if(match) shown++;
     });
-    if(sectionSearchStatus) sectionSearchStatus.textContent=q ? (shown ? `${shown} matching section${shown===1?'':'s'} · tap a numbered result to open it.` : 'No matching section. Try a broader term such as “trend”, “volume” or “news”.') : '11 sections · follow the numbered order, or search by tool name.';
+    if(sectionSearchStatus) sectionSearchStatus.textContent=q ? (shown ? `${shown} matching section${shown===1?'':'s'} · tap a numbered result to open it.` : 'No matching section. Try a broader term such as “trend”, “volume” or “news”.') : '16 sections · follow the numbered order, or search by tool name.';
     const active=document.querySelector('#analysisTabbar .tabbtn.active');
     if(q && active && active.hidden){
       const first=analysisTabs.find(b=>!b.hidden);
@@ -3111,6 +3161,25 @@ if(sectionSearch){
     if(e.key==='Escape'){sectionSearch.value='';sectionSearch.dispatchEvent(new Event('input'));}
   });
 }
+
+
+/* ============ NEW SECTION SHORTCUTS + RISK CALCULATOR ============ */
+document.querySelectorAll('[data-jump]').forEach(btn=>btn.addEventListener('click',()=>{
+  const target=document.getElementById(btn.dataset.jump); if(!target)return;
+  if(target.id==='csvFile') target.focus({preventScroll:true});
+  target.scrollIntoView({behavior:'smooth',block:'start'});
+  if(target.id==='csvFile') target.click();
+}));
+const riskCalcBtn=document.getElementById('riskCalcBtn');
+if(riskCalcBtn) riskCalcBtn.addEventListener('click',()=>{
+  const cap=Number(document.getElementById('riskCapital').value), pct=Number(document.getElementById('riskPercent').value);
+  const entry=Number(document.getElementById('riskEntry').value), stop=Number(document.getElementById('riskStop').value), target=Number(document.getElementById('riskTarget').value);
+  const out=document.getElementById('riskCalcResult');
+  if(!(cap>0&&pct>0&&pct<=100&&entry>0&&stop>0&&entry!==stop)) {out.textContent='Please enter positive capital, risk percentage (up to 100%), entry and a different stop-loss price.';return;}
+  const perShare=Math.abs(entry-stop), riskBudget=cap*pct/100, shares=Math.floor(riskBudget/perShare), actualRisk=shares*perShare;
+  const rr=target>0&&((entry>stop&&target>entry)||(entry<stop&&target<entry))?Math.abs(target-entry)/perShare:null;
+  out.innerHTML=`<div><b>Maximum planned risk budget:</b> ₹${riskBudget.toLocaleString('en-IN',{maximumFractionDigits:2})}</div><div><b>Risk per share:</b> ₹${perShare.toLocaleString('en-IN',{maximumFractionDigits:2})}</div><div><b>Indicative quantity:</b> ${shares.toLocaleString('en-IN')} share(s)</div><div><b>Approx. position value:</b> ₹${(shares*entry).toLocaleString('en-IN',{maximumFractionDigits:2})}</div><div><b>Planned loss at stop:</b> ₹${actualRisk.toLocaleString('en-IN',{maximumFractionDigits:2})}</div>${rr!==null?`<div><b>Reward:risk to target:</b> ${rr.toFixed(2)}:1</div>`:(target>0?'<div>Target direction does not match the entry/stop setup; reward:risk not shown.</div>':'')}`;
+});
 
 if(Object.keys(DB).length){ document.getElementById('loadStatus').textContent = `${Object.keys(DB).length} symbol(s) already stored locally.`; }
 </script>
