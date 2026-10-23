@@ -63,9 +63,15 @@
   .msg.user{background:var(--card2);margin-left:20%}
   .msg.ai{background:#101013;margin-right:5%;border:1px solid var(--border)}
   .flexend{display:flex;gap:8px;justify-content:flex-end}
-  .tabbar{display:flex;gap:6px;margin-bottom:12px;overflow-x:auto}
+  .sectionFinder{display:flex;gap:8px;align-items:center;margin:12px 0 8px;flex-wrap:wrap}
+  .sectionFinder label{font-size:12px;font-weight:700;color:var(--sub);white-space:nowrap}
+  #sectionSearch{flex:1;min-width:180px;padding:10px 12px;border-radius:9px;border:1px solid var(--border);background:var(--card2);color:var(--text);font:inherit}
+  #sectionSearchStatus{width:100%;font-size:11.5px;color:var(--sub)}
+  .tabbar{display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;scrollbar-width:thin;padding-bottom:3px}
   .tabbtn{padding:8px 12px;border-radius:8px;background:var(--card2);border:1px solid var(--border);color:var(--sub);white-space:nowrap;font-weight:600;font-size:13px}
   .tabbtn.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+  .tabbtn[hidden]{display:none}
+  .serial-guide{font-size:12px;color:var(--sub);margin:0 0 8px;line-height:1.5}
   .tabpane{display:none}
   .tabpane.active{display:block}
   canvas{width:100%;height:220px;background:var(--card2);border-radius:8px}
@@ -246,18 +252,24 @@
       <div class="footNote">Research aid only. Sentiment is keyword-based, and the direction model is a lightweight logistic-regression classifier trained on this stock's loaded history. Estimates are not guarantees or personalized investment advice.</div>
     </section>
 
-    <div class="tabbar">
-      <button class="tabbtn active" data-tab="structure">Structure</button>
-      <button class="tabbtn" data-tab="smartmoney">Smart Money</button>
-      <button class="tabbtn" data-tab="ichi">Ichimoku / BB</button>
-      <button class="tabbtn" data-tab="sector">Sector & RS</button>
-      <button class="tabbtn" data-tab="scen">Scenarios</button>
-      <button class="tabbtn" data-tab="dna">Stock DNA</button>
-      <button class="tabbtn" data-tab="psych">Psychology</button>
-      <button class="tabbtn" data-tab="why">Why is it moving</button>
-      <button class="tabbtn" data-tab="pattern">Pattern history</button>
-      <button class="tabbtn" data-tab="options">Options / Institutional</button>
-      <button class="tabbtn" data-tab="ai">Ask AI</button>
+    <div class="sectionFinder">
+      <label for="sectionSearch">FIND A TOOL</label>
+      <input id="sectionSearch" type="search" autocomplete="off" placeholder="Search: liquidity, BOS, Smart Money, Ichimoku…" aria-label="Search analysis sections and tools">
+      <div id="sectionSearchStatus" aria-live="polite">11 sections · follow the numbered order, or search by tool name.</div>
+    </div>
+    <p class="serial-guide">ANALYSIS ORDER: 01 Structure → 02 Smart Money → 03 Ichimoku / Bollinger Bands → 04 Sector & Relative Strength → 05 Scenarios → 06 Stock DNA → 07 Psychology → 08 Why It's Moving → 09 Pattern History → 10 Options / Institutional → 11 Ask AI.</p>
+    <div class="tabbar" id="analysisTabbar" aria-label="Numbered analysis sections">
+      <button class="tabbtn active" data-tab="structure" data-serial="01">01 · Structure</button>
+      <button class="tabbtn" data-tab="smartmoney" data-serial="02">02 · Smart Money</button>
+      <button class="tabbtn" data-tab="ichi" data-serial="03">03 · Ichimoku / BB</button>
+      <button class="tabbtn" data-tab="sector" data-serial="04">04 · Sector & RS</button>
+      <button class="tabbtn" data-tab="scen" data-serial="05">05 · Scenarios</button>
+      <button class="tabbtn" data-tab="dna" data-serial="06">06 · Stock DNA</button>
+      <button class="tabbtn" data-tab="psych" data-serial="07">07 · Psychology</button>
+      <button class="tabbtn" data-tab="why" data-serial="08">08 · Why it's moving</button>
+      <button class="tabbtn" data-tab="pattern" data-serial="09">09 · Pattern history</button>
+      <button class="tabbtn" data-tab="options" data-serial="10">10 · Options / Institutional</button>
+      <button class="tabbtn" data-tab="ai" data-serial="11">11 · Ask AI</button>
     </div>
 
     <!-- STRUCTURE -->
@@ -3059,16 +3071,46 @@ function addWhyButton(panel){
 }
 document.getElementById('scenAiBtn').addEventListener('click',()=>askAI('Review the three scenarios (A continuation, B pullback, C breakdown). Which has the most calculated support today, what would confirm or invalidate each, and what is not calculated?',document.getElementById('scenAiOut')));
 
-/* ============ TABS ============ */
-document.querySelectorAll('.tabbtn').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    document.querySelectorAll('.tabbtn').forEach(b=>b.classList.remove('active'));
-    document.querySelectorAll('.tabpane').forEach(p=>p.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
-    if(btn.dataset.tab==='ichi') drawIchiChart();
+/* ============ NUMBERED TABS + SEARCH ============ */
+const analysisTabs = Array.from(document.querySelectorAll('#analysisTabbar .tabbtn'));
+function activateAnalysisTab(btn){
+  if(!btn) return;
+  document.querySelectorAll('#analysisTabbar .tabbtn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tabpane').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  const pane=document.getElementById('tab-'+btn.dataset.tab);
+  if(pane) pane.classList.add('active');
+  if(btn.dataset.tab==='ichi') drawIchiChart();
+}
+analysisTabs.forEach(btn=>btn.addEventListener('click',()=>activateAnalysisTab(btn)));
+const sectionSearch=document.getElementById('sectionSearch');
+const sectionSearchStatus=document.getElementById('sectionSearchStatus');
+if(sectionSearch){
+  sectionSearch.addEventListener('input',()=>{
+    const q=sectionSearch.value.trim().toLocaleLowerCase();
+    let shown=0;
+    analysisTabs.forEach(btn=>{
+      const pane=document.getElementById('tab-'+btn.dataset.tab);
+      const haystack=((btn.textContent||'')+' '+(pane?.textContent||'')).toLocaleLowerCase();
+      const match=!q||haystack.includes(q);
+      btn.hidden=!match;
+      if(match) shown++;
+    });
+    if(sectionSearchStatus) sectionSearchStatus.textContent=q ? (shown ? `${shown} matching section${shown===1?'':'s'} · tap a numbered result to open it.` : 'No matching section. Try a broader term such as “trend”, “volume” or “news”.') : '11 sections · follow the numbered order, or search by tool name.';
+    const active=document.querySelector('#analysisTabbar .tabbtn.active');
+    if(q && active && active.hidden){
+      const first=analysisTabs.find(b=>!b.hidden);
+      if(first) activateAnalysisTab(first);
+    }
   });
-});
+  sectionSearch.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){
+      const first=analysisTabs.find(b=>!b.hidden);
+      if(first){activateAnalysisTab(first); first.scrollIntoView({behavior:'smooth',block:'nearest',inline:'nearest'});}
+    }
+    if(e.key==='Escape'){sectionSearch.value='';sectionSearch.dispatchEvent(new Event('input'));}
+  });
+}
 
 if(Object.keys(DB).length){ document.getElementById('loadStatus').textContent = `${Object.keys(DB).length} symbol(s) already stored locally.`; }
 </script>
