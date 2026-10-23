@@ -217,6 +217,23 @@
     <div id="loadStatus" class="footNote"></div>
   </div>
 
+  <!-- Numbered analysis categories, positioned above the Marak Smart Stock Scanner -->
+  <div class="tabbar" id="analysisTabbar" aria-label="Numbered analysis sections">
+        <button class="tabbtn active" data-tab="structure" data-serial="01">01 · Structure</button>
+        <button class="tabbtn" data-tab="smartmoney" data-serial="02">02 · Smart Money</button>
+        <button class="tabbtn" data-tab="ichi" data-serial="03">03 · Ichimoku / BB</button>
+        <button class="tabbtn" data-tab="sector" data-serial="04">04 · Sector & RS</button>
+        <button class="tabbtn" data-tab="scen" data-serial="05">05 · Scenarios</button>
+        <button class="tabbtn" data-tab="dna" data-serial="06">06 · Stock DNA</button>
+        <button class="tabbtn" data-tab="psych" data-serial="07">07 · Psychology</button>
+        <button class="tabbtn" data-tab="ai" data-serial="11">11 · Ask AI</button>
+        <button class="tabbtn" data-tab="mlpred" data-serial="12">12 · ML Predictions</button>
+        <button class="tabbtn" data-tab="backtest" data-serial="13">13 · Backtesting</button>
+        <button class="tabbtn" data-tab="sentiment" data-serial="14">14 · News & Sentiment</button>
+        <button class="tabbtn" data-tab="csvscanner" data-serial="15">15 · CSV Scanner</button>
+        <button class="tabbtn" data-tab="riskmanage" data-serial="16">16 · Risk Management</button>
+      </div>
+
   <section class="card" id="smartScannerCard" style="display:none" aria-live="polite">
     <div class="statusline" style="border:none;padding:0;align-items:flex-start">
       <div><h3 style="margin-bottom:4px;color:var(--text)">MARAK SMART STOCK SCANNER</h3><div class="muted">Scans only symbols and historical candles loaded from your CSV files. Other live-data modules are separate and are not used to populate this scanner.</div></div>
@@ -252,30 +269,7 @@
       <div class="footNote">Research aid only. Sentiment is keyword-based, and the direction model is a lightweight logistic-regression classifier trained on this stock's loaded history. Estimates are not guarantees or personalized investment advice.</div>
     </section>
 
-    <div class="sectionFinder">
-      <label for="sectionSearch">FIND A TOOL</label>
-      <input id="sectionSearch" type="search" autocomplete="off" placeholder="Search: liquidity, BOS, Smart Money, Ichimoku…" aria-label="Search analysis sections and tools">
-      <div id="sectionSearchStatus" aria-live="polite">16 sections · follow the numbered order, or search by tool name.</div>
-    </div>
-    <p class="serial-guide">ANALYSIS ORDER: 01 Structure → 02 Smart Money → 03 Ichimoku / Bollinger Bands → 04 Sector & Relative Strength → 05 Scenarios → 06 Stock DNA → 07 Psychology → 08 Why It's Moving → 09 Pattern History → 10 Options / Institutional → 11 Ask AI → 12 ML Predictions → 13 Backtesting & Validation → 14 News & Sentiment → 15 CSV Scanner → 16 Risk Management.</p>
-    <div class="tabbar" id="analysisTabbar" aria-label="Numbered analysis sections">
-      <button class="tabbtn active" data-tab="structure" data-serial="01">01 · Structure</button>
-      <button class="tabbtn" data-tab="smartmoney" data-serial="02">02 · Smart Money</button>
-      <button class="tabbtn" data-tab="ichi" data-serial="03">03 · Ichimoku / BB</button>
-      <button class="tabbtn" data-tab="sector" data-serial="04">04 · Sector & RS</button>
-      <button class="tabbtn" data-tab="scen" data-serial="05">05 · Scenarios</button>
-      <button class="tabbtn" data-tab="dna" data-serial="06">06 · Stock DNA</button>
-      <button class="tabbtn" data-tab="psych" data-serial="07">07 · Psychology</button>
-      <button class="tabbtn" data-tab="why" data-serial="08">08 · Why it's moving</button>
-      <button class="tabbtn" data-tab="pattern" data-serial="09">09 · Pattern history</button>
-      <button class="tabbtn" data-tab="options" data-serial="10">10 · Options / Institutional</button>
-      <button class="tabbtn" data-tab="ai" data-serial="11">11 · Ask AI</button>
-      <button class="tabbtn" data-tab="mlpred" data-serial="12">12 · ML Predictions</button>
-      <button class="tabbtn" data-tab="backtest" data-serial="13">13 · Backtesting</button>
-      <button class="tabbtn" data-tab="sentiment" data-serial="14">14 · News & Sentiment</button>
-      <button class="tabbtn" data-tab="csvscanner" data-serial="15">15 · CSV Scanner</button>
-      <button class="tabbtn" data-tab="riskmanage" data-serial="16">16 · Risk Management</button>
-    </div>
+
 
     <!-- STRUCTURE -->
     <div class="tabpane active" id="tab-structure">
@@ -3133,34 +3127,6 @@ function activateAnalysisTab(btn){
   if(btn.dataset.tab==='ichi') drawIchiChart();
 }
 analysisTabs.forEach(btn=>btn.addEventListener('click',()=>activateAnalysisTab(btn)));
-const sectionSearch=document.getElementById('sectionSearch');
-const sectionSearchStatus=document.getElementById('sectionSearchStatus');
-if(sectionSearch){
-  sectionSearch.addEventListener('input',()=>{
-    const q=sectionSearch.value.trim().toLocaleLowerCase();
-    let shown=0;
-    analysisTabs.forEach(btn=>{
-      const pane=document.getElementById('tab-'+btn.dataset.tab);
-      const haystack=((btn.textContent||'')+' '+(pane?.textContent||'')).toLocaleLowerCase();
-      const match=!q||haystack.includes(q);
-      btn.hidden=!match;
-      if(match) shown++;
-    });
-    if(sectionSearchStatus) sectionSearchStatus.textContent=q ? (shown ? `${shown} matching section${shown===1?'':'s'} · tap a numbered result to open it.` : 'No matching section. Try a broader term such as “trend”, “volume” or “news”.') : '16 sections · follow the numbered order, or search by tool name.';
-    const active=document.querySelector('#analysisTabbar .tabbtn.active');
-    if(q && active && active.hidden){
-      const first=analysisTabs.find(b=>!b.hidden);
-      if(first) activateAnalysisTab(first);
-    }
-  });
-  sectionSearch.addEventListener('keydown',e=>{
-    if(e.key==='Enter'){
-      const first=analysisTabs.find(b=>!b.hidden);
-      if(first){activateAnalysisTab(first); first.scrollIntoView({behavior:'smooth',block:'nearest',inline:'nearest'});}
-    }
-    if(e.key==='Escape'){sectionSearch.value='';sectionSearch.dispatchEvent(new Event('input'));}
-  });
-}
 
 
 /* ============ NEW SECTION SHORTCUTS + RISK CALCULATOR ============ */
