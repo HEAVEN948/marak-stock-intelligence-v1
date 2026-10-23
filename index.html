@@ -2711,8 +2711,8 @@ function mlFeatureRows(bars,horizon=1){
     const mean=rets.reduce((a,b)=>a+b,0)/(rets.length||1), vol=Math.sqrt(rets.reduce((a,b)=>a+(b-mean)**2,0)/(rets.length||1));
     const avgVol=bars.slice(i-19,i+1).reduce((a,b)=>a+(+b.volume||0),0)/20;
     const volRatio=avgVol?(+bars[i].volume||0)/avgVol:1;
-    const closes=bars.slice(0,i+1).map(b=>b.close), ema20=closes.slice(-20).reduce((a,b)=>a+b,0)/Math.min(20,closes.length), ema50=closes.slice(-50).reduce((a,b)=>a+b,0)/Math.min(50,closes.length);
-    const feat=[ret5,ret20,vol,Math.max(-3,Math.min(3,volRatio-1)),(ema20/ema50)-1];
+    const closes=bars.slice(0,i+1).map(b=>b.close), sma20=closes.slice(-20).reduce((a,b)=>a+b,0)/Math.min(20,closes.length), sma50=closes.slice(-50).reduce((a,b)=>a+b,0)/Math.min(50,closes.length);
+    const feat=[ret5,ret20,vol,Math.max(-3,Math.min(3,volRatio-1)),(sma20/sma50)-1];
     if(feat.every(Number.isFinite)) rows.push({x:feat,y:bars[i+horizon].close>bars[i].close?1:0,date:bars[i+horizon].date,ret:(bars[i+horizon].close/bars[i].close)-1});
   }
   return rows;
@@ -2730,8 +2730,8 @@ function currentMLFeatures(bars){
   const rets=[];for(let j=Math.max(1,i-19);j<=i;j++)rets.push(bars[j].close/bars[j-1].close-1);
   const mean=rets.reduce((a,b)=>a+b,0)/(rets.length||1),vol=Math.sqrt(rets.reduce((a,b)=>a+(b-mean)**2,0)/(rets.length||1));
   const avgVol=bars.slice(Math.max(0,i-19),i+1).reduce((a,b)=>a+(+b.volume||0),0)/Math.min(20,i+1),volRatio=avgVol?(+bars[i].volume||0)/avgVol:1;
-  const closes=bars.slice(Math.max(0,i-49),i+1).map(b=>b.close),ema20=bars.slice(Math.max(0,i-19),i+1).reduce((a,b)=>a+b.close,0)/Math.min(20,i+1),ema50=closes.reduce((a,b)=>a+b,0)/closes.length;
-  return [(c/p5)-1,(c/p20)-1,vol,Math.max(-3,Math.min(3,volRatio-1)),(ema20/ema50)-1];
+  const closes=bars.slice(Math.max(0,i-49),i+1).map(b=>b.close),sma20=bars.slice(Math.max(0,i-19),i+1).reduce((a,b)=>a+b.close,0)/Math.min(20,i+1),sma50=closes.reduce((a,b)=>a+b,0)/closes.length;
+  return [(c/p5)-1,(c/p20)-1,vol,Math.max(-3,Math.min(3,volRatio-1)),(sma20/sma50)-1];
 }
 function runDirectionModel(bars,horizon=1){
   // Each horizon is trained on historical labels ending before the current candle.
@@ -2775,16 +2775,23 @@ async function runMLWalkForwardBacktest(bars, threshold=0.55, roundTripCost=0.00
   const start=Math.max(40,Math.floor(rows.length*.70)), predictions=[];
   // Expanding-window evaluation: each fit uses only labels available before the test row.
   for(let j=start;j<rows.length;j++){
-    const model=trainLogistic(rows.slice(0,j),100,0.06); if(!model)continue;
+    const trainRows=rows.slice(0,j), model=trainLogistic(trainRows,100,0.06); if(!model)continue;
     const p=model.predict(rows[j].x), actual=rows[j].y, trade=p>=threshold;
-    predictions.push({p,actual,trade,net:trade?rows[j].ret-roundTripCost:0,raw:rows[j].ret,date:rows[j].date});
+    const positiveRate=trainRows.reduce((a,r)=>a+r.y,0)/trainRows.length;
+    const baseline=positiveRate>=0.5?1:0;
+    // This legacy close-to-close return is retained for comparability, but is not an executable fill
+    // because the signal uses closing data. The UI explicitly warns that returns may be unachievable.
+    const closeToCloseRet=rows[j].ret;
+    predictions.push({p,actual,baseline,trade,net:trade?closeToCloseRet-roundTripCost:0,raw:closeToCloseRet,date:rows[j].date});
     if((j-start)%4===3) await new Promise(resolve=>setTimeout(resolve,0));
   }
   if(!predictions.length)return {ready:false,n:rows.length,reason:'Not enough sequential test observations.'};
-  const correct=predictions.filter(x=>(x.p>=.5?1:0)===x.actual).length,trades=predictions.filter(x=>x.trade),wins=trades.filter(x=>x.net>0).length;
+  const correct=predictions.filter(x=>(x.p>=.5?1:0)===x.actual).length,baseCorrect=predictions.filter(x=>x.baseline===x.actual).length,trades=predictions.filter(x=>x.trade),wins=trades.filter(x=>x.net>0).length;
+  const brier=predictions.reduce((a,x)=>a+(x.p-x.actual)**2,0)/predictions.length;
+  const logLoss=predictions.reduce((a,x)=>{const q=Math.max(1e-7,Math.min(1-1e-7,x.p));return a-(x.actual?Math.log(q):Math.log(1-q));},0)/predictions.length;
   let equity=1,peak=1,maxDD=0,benchmark=1;
   for(const x of predictions){equity*=1+x.net;benchmark*=1+x.raw;peak=Math.max(peak,equity);maxDD=Math.max(maxDD,(peak-equity)/peak);}
-  const result={ready:true,n:predictions.length,accuracy:correct/predictions.length,trades:trades.length,winRate:trades.length?wins/trades.length:null,strategyReturn:equity-1,benchmarkReturn:benchmark-1,maxDrawdown:maxDD,threshold,from:predictions[0].date,to:predictions[predictions.length-1].date,cost:roundTripCost};
+  const result={ready:true,n:predictions.length,accuracy:correct/predictions.length,baselineAccuracy:baseCorrect/predictions.length,brier,logLoss,upRate:predictions.reduce((a,x)=>a+x.actual,0)/predictions.length,trades:trades.length,winRate:trades.length?wins/trades.length:null,strategyReturn:equity-1,benchmarkReturn:benchmark-1,maxDrawdown:maxDD,threshold,from:predictions[0].date,to:predictions[predictions.length-1].date,cost:roundTripCost,execution:'close-to-close; not directly executable'};
   msiBacktestCache.set(key,result); if(msiBacktestCache.size>12)msiBacktestCache.delete(msiBacktestCache.keys().next().value);
   return result;
 }
@@ -2792,7 +2799,7 @@ async function renderIntelDashboard(sym,bars){
   const el=byId('intelDashboardBody');if(!el)return;
   const last=bars[bars.length-1],prev=bars[bars.length-2],chg=prev?(last.close/prev.close-1)*100:0;
   const model=runDirectionModel(bars,1),model5=runDirectionModel(bars,5),model20=runDirectionModel(bars,20),calc=computeAll(bars),i=bars.length-1,rsi=calc.rsi[i],atrp=calc.atr[i]!=null?calc.atr[i]/last.close*100:null;
-  const horizonHtml=(m,label)=>`<div class="intelMetric"><div class="k">${label} direction estimate</div><div class="v ${m.ready?(m.p>=.55?'up':m.p<=.45?'down':''):''}">${m.ready?(m.p>=.55?'↑ Higher':m.p<=.45?'↓ Lower':'↔ Unclear'):'More data needed'}</div><div class="d">${m.ready?`Model-estimated probability of a higher close: ${(m.p*100).toFixed(0)}% · ${m.n} historical examples.`:`Insufficient history (${m.n} examples).`}</div></div>`;
+  const horizonHtml=(m,label)=>`<div class="intelMetric"><div class="k">${label} direction estimate</div><div class="v ${m.ready?(m.p>=.55?'up':m.p<=.45?'down':''):''}">${m.ready?(m.p>=.55?'↑ Higher':m.p<=.45?'↓ Lower':'↔ Unclear'):'More data needed'}</div><div class="d">${m.ready?`Model-estimated probability of a higher close: ${(m.p*100).toFixed(0)}% · trained on ${m.n} historical examples; probability not yet calibrated.`:`Insufficient history (${m.n} examples).`}</div></div>`;
   const modelHtml=horizonHtml(model,'1-session')+horizonHtml(model5,'5-session')+horizonHtml(model20,'20-session');
   el.innerHTML=`<div class="intelGrid"><div class="intelMetric"><div class="k">Last loaded close</div><div class="v">₹${Number(last.close).toLocaleString('en-IN',{maximumFractionDigits:2})}</div><div class="d">${escH(last.date)} · ${chg>=0?'+':''}${chg.toFixed(2)}% vs prior loaded session</div></div>${modelHtml}<div class="intelMetric"><div class="k">Risk snapshot</div><div class="v">${atrp==null?'—':atrp.toFixed(2)+'% ATR'}</div><div class="d">RSI(14): ${rsi==null?'n/a':rsi.toFixed(1)} · ATR as % of last close is a volatility gauge, not a loss limit.</div></div><div class="intelMetric" style="grid-column:1/-1"><div class="k">Automatic historical model test</div><div id="intelBacktest"><div class="d">Runs automatically using only earlier CSV history; large datasets may take a moment.</div></div></div><div class="intelMetric" style="grid-column:1/-1"><div class="k">Headline sentiment</div><div id="intelSentiment"><div class="v">Loading headlines…</div><div class="d">Searching recent news for ${escH(sym)}.</div></div></div></div>`;
   const btEl=byId('intelBacktest');
@@ -2801,7 +2808,7 @@ async function renderIntelDashboard(sym,bars){
     const bt=await runMLWalkForwardBacktest(bars);
     if(currentSymbol===sym&&byId('intelBacktest')){
       const pct=v=>(v>=0?'+':'')+(v*100).toFixed(2)+'%';
-      btEl.innerHTML=bt.ready?`<div class="intelGrid"><div><div class="k">Directional accuracy</div><div class="v">${(bt.accuracy*100).toFixed(1)}%</div></div><div><div class="k">Trades</div><div class="v">${bt.trades}</div><div class="d">Entry rule: model up estimate ≥ ${(bt.threshold*100).toFixed(0)}%</div></div><div><div class="k">Win rate</div><div class="v">${bt.winRate==null?'—':(bt.winRate*100).toFixed(1)+'%'}</div></div><div><div class="k">Strategy return</div><div class="v ${bt.strategyReturn>=0?'up':'down'}">${pct(bt.strategyReturn)}</div></div><div><div class="k">Buy-and-hold</div><div class="v ${bt.benchmarkReturn>=0?'up':'down'}">${pct(bt.benchmarkReturn)}</div></div><div><div class="k">Maximum drawdown</div><div class="v down">${(bt.maxDrawdown*100).toFixed(2)}%</div></div></div><div class="d">Out-of-sample window: ${escH(bt.from)} to ${escH(bt.to)} · ${bt.n} test observations · assumed round-trip cost ${(bt.cost*100).toFixed(2)}% per trade.</div><div class="footNote">Historical simulation only, not a forecast or guarantee. The displayed 1-, 5-, and 20-session estimates are separate model outputs, not calibrated probabilities. The backtest currently evaluates the next-session baseline and assumes close-to-close returns, which may not be achievable after a signal is known. The cost assumption is illustrative and excludes any additional taxes, market impact, liquidity limits, and execution slippage. Results can be unstable on small samples.</div>`:`<div class="d">${escH(bt.reason||'More historical CSV data is needed.')} Feature rows available: ${bt.n||0}.</div>`;
+      btEl.innerHTML=bt.ready?`<div class="intelGrid"><div><div class="k">Directional accuracy</div><div class="v">${(bt.accuracy*100).toFixed(1)}%</div></div><div><div class="k">Trades</div><div class="v">${bt.trades}</div><div class="d">Entry rule: model up estimate ≥ ${(bt.threshold*100).toFixed(0)}%</div></div><div><div class="k">Win rate</div><div class="v">${bt.winRate==null?'—':(bt.winRate*100).toFixed(1)+'%'}</div></div><div><div class="k">Strategy return</div><div class="v ${bt.strategyReturn>=0?'up':'down'}">${pct(bt.strategyReturn)}</div></div><div><div class="k">Buy-and-hold</div><div class="v ${bt.benchmarkReturn>=0?'up':'down'}">${pct(bt.benchmarkReturn)}</div></div><div><div class="k">Maximum drawdown</div><div class="v down">${(bt.maxDrawdown*100).toFixed(2)}%</div></div><div><div class="k">Brier score</div><div class="v">${bt.brier.toFixed(3)}</div><div class="d">Lower is better; 0 is perfect.</div></div><div><div class="k">Log loss</div><div class="v">${bt.logLoss.toFixed(3)}</div><div class="d">Lower is better.</div></div><div><div class="k">Simple baseline accuracy</div><div class="v">${(bt.baselineAccuracy*100).toFixed(1)}%</div><div class="d">Prior training-set majority class.</div></div></div><div class="d">Out-of-sample window: ${escH(bt.from)} to ${escH(bt.to)} · ${bt.n} test observations · assumed round-trip cost ${(bt.cost*100).toFixed(2)}% per trade · execution assumption: close-to-close after signal close (optimistic / not directly executable).</div><div class="footNote">Historical simulation only, not a forecast or guarantee. The 1-, 5-, and 20-session estimates are experimental model outputs; they are not calibrated probabilities. Brier score and log loss measure probabilistic prediction quality but do not alone establish calibration. The strategy return uses close-to-close returns after a signal based on closing data, which can be optimistic and may not be directly executable. The benchmark uses the same close-to-close return window. The 0.20% round-trip cost is illustrative and excludes taxes, market impact, liquidity constraints, and additional slippage. Results can be unstable on small samples.</div>`:`<div class="d">${escH(bt.reason||'More historical CSV data is needed.')} Feature rows available: ${bt.n||0}.</div>`;
     }
   }
   try{
