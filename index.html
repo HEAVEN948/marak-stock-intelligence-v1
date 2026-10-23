@@ -2693,13 +2693,34 @@ byId('newsBody').addEventListener('click',e=>{
 byId('newsBody').addEventListener('keydown',e=>{ if(e.key!=='Enter') return; if(e.target.id==='newsTerm') byId('newsBody').querySelector('#newsGo').click(); else if(e.target.id==='tvSym') byId('newsBody').querySelector('#tvGo').click(); });
 
 /* ============ INTELLIGENCE DASHBOARD: transparent sentiment + small ML baseline ============ */
-const INTEL_POSITIVE = /beat(s|ing)? estimates|profit (rise|surge|jump|growth|increase)|revenue (rise|growth|increase|beat)|upgrade(d)?|buy rating|order win|new order|contract win|dividend|buyback|bonus issue|record profit|strong results|margin expansion|approval|positive outlook|acquisition|capacity expansion|stake sale at premium|debt reduction|debt free|outperform|bullish|rally|surge|jumps|gains|rises|growth/i;
-const INTEL_NEGATIVE = /miss(es|ed)? estimates|loss widens|profit (fall|drop|decline|slump)|revenue (fall|decline|miss)|downgrade(d)?|sell rating|fraud|probe|investigation|penalty|fine imposed|default|bankruptcy|resign(s|ed)?|layoff|recall|plant shutdown|regulatory action|weak results|margin contraction|guidance cut|debt concern|bearish|crash|plunges|slumps|falls sharply|fraud|insolvency/i;
+// Transparent rule-based financial sentiment. Broader phrase lists reduce false zeros,
+// but this is still a heuristic and does not understand every headline's context.
+const INTEL_POSITIVE_TERMS = [
+  'beat estimates','beats estimates','above estimates','profit rises','profit rose','profit jumps','profit grows','profit growth','profit increases','higher profit','record profit','revenue rises','revenue rose','revenue grows','revenue growth','revenue increases','sales rise','sales growth','earnings rise','earnings growth','strong results','better than expected','outperforms','upgrade','upgraded','buy rating','overweight','price target raised','target price raised','order win','wins order','new order','bags order','contract win','secures contract','dividend','buyback','bonus issue','stock split','margin expansion','approval','approved','positive outlook','capacity expansion','expansion plan','acquires','acquisition','stake sale at premium','debt reduction','debt free','bullish','rally','surge','surges','jumps','gains','gained','rises','rising','shares rise','stock rises','growth','record high','all-time high','strong demand','fund inflow','inflows','promoter buying','deal win','partnership','launches','launch of','raises guidance','guidance raised','profit beats','turnaround','recovery'
+];
+const INTEL_NEGATIVE_TERMS = [
+  'misses estimates','missed estimates','below estimates','profit falls','profit fell','profit drops','profit declines','profit slump','loss widens','widening loss','net loss','revenue falls','revenue fell','revenue declines','revenue drops','sales fall','sales decline','earnings fall','weak results','worse than expected','underperforms','downgrade','downgraded','sell rating','underweight','price target cut','target price cut','fraud','probe','investigation','penalty','fine imposed','default','bankruptcy','resigns','resignation','layoff','layoffs','recall','plant shutdown','regulatory action','guidance cut','debt concern','debt rises','debt increase','bearish','crash','plunges','slumps','falls sharply','insolvency','losses','loss','decline','declines','drops','drop','fell','fall','falls','falling','shares fall','stock falls','cuts guidance','guidance lowered','order cancelled','order canceled','contract terminated','approval rejected','rejected','blocked','ban on','selloff','selling pressure','outflow','outflows','promoter selling','pledge increase','rating cut','margin contraction','weak demand','misses forecast','missed forecast','lawsuit','fraud allegation'
+];
+function findSentimentTerms(text, terms){
+  const s=String(text||'').toLowerCase().replace(/[’‘]/g,"'").replace(/[^a-z0-9%+.-]+/g,' ').replace(/\s+/g,' ').trim();
+  return terms.filter(term=>new RegExp('(^|[^a-z0-9])'+term.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/\s+/g,'\\s+')+'([^a-z0-9]|$)','i').test(s));
+}
 function headlineSentiment(items){
-  const rows=(items||[]).map(x=>{const title=String(x.title||'');let score=0;if(INTEL_POSITIVE.test(title))score+=1;if(INTEL_NEGATIVE.test(title))score-=1;return {...x,score};});
-  const useful=rows.filter(x=>x.score!==0), raw=useful.length?useful.reduce((a,x)=>a+x.score,0)/useful.length:0;
+  const rows=(items||[]).map(x=>{
+    const title=String(x.title||'');
+    let positiveMatches=findSentimentTerms(title,INTEL_POSITIVE_TERMS), negativeMatches=findSentimentTerms(title,INTEL_NEGATIVE_TERMS);
+    // Simple negation guard: avoid counting a positive phrase immediately negated.
+    const cleanPositive=positiveMatches.filter(term=>{const at=title.toLowerCase().indexOf(term);return at<0||!/(not|no|never|fails to|failed to|unable to)\s+(?:\w+\s+){0,2}$/.test(title.toLowerCase().slice(Math.max(0,at-30),at));});
+    let score=0;
+    if(cleanPositive.length && !negativeMatches.length) score=1;
+    else if(negativeMatches.length && !cleanPositive.length) score=-1;
+    else if(cleanPositive.length && negativeMatches.length) score=cleanPositive.length>negativeMatches.length?1:negativeMatches.length>cleanPositive.length?-1:0;
+    return {...x,score,positiveTerms:cleanPositive,negativeTerms:negativeMatches};
+  });
+  // Neutral headlines remain in the denominator, so one matching headline does not dominate the score.
+  const raw=rows.length?rows.reduce((a,x)=>a+x.score,0)/rows.length:0;
   const score=Math.round(raw*100), label=score>=20?'Positive':score<=-20?'Negative':'Mixed / neutral';
-  return {score,label,count:rows.length,positive:rows.filter(x=>x.score>0).length,negative:rows.filter(x=>x.score<0).length,headlines:rows.slice(0,3)};
+  return {score,label,count:rows.length,positive:rows.filter(x=>x.score>0).length,negative:rows.filter(x=>x.score<0).length,positiveMatches:rows.reduce((n,x)=>n+x.positiveTerms.length,0),negativeMatches:rows.reduce((n,x)=>n+x.negativeTerms.length,0),headlines:rows.slice(0,5)};
 }
 function mlFeatureRows(bars,horizon=1){
   const rows=[];
@@ -2815,7 +2836,7 @@ async function renderIntelDashboard(sym,bars){
     const q=getNewsTerm(sym)+' when:14d', items=await fetchNewsItems(q);if(currentSymbol!==sym)return;
     const sent=headlineSentiment(items),sentEl=byId('intelSentiment');if(!sentEl)return;
     const cls=sent.score>=20?'up':sent.score<=-20?'down':'';
-    sentEl.innerHTML=`<div class="row" style="align-items:center;gap:12px"><div class="v ${cls}" style="margin:0">${sent.score>0?'+':''}${sent.score}</div><div><b>${escH(sent.label)}</b><div class="d">${sent.count} headlines scanned · ${sent.positive} positive keyword matches · ${sent.negative} negative keyword matches</div></div><span class="intelPill">Keyword-based, not an AI fact-check</span></div>`+(sent.headlines.length?'<div style="margin-top:8px">'+sent.headlines.map(h=>`<div class="statusline" style="align-items:flex-start"><span style="flex:1">${escH(h.title)}<div class="muted">${h.score>0?'Positive keyword match':h.score<0?'Negative keyword match':'No clear keyword match'}</div></span></div>`).join('')+'</div>':'<div class="muted" style="margin-top:6px">No headlines were returned. Try the News & announcements panel.</div>');
+    sentEl.innerHTML=`<div class="row" style="align-items:center;gap:12px"><div class="v ${cls}" style="margin:0">${sent.score>0?'+':''}${sent.score}</div><div><b>${escH(sent.label)}</b><div class="d">${sent.count} headlines scanned · ${sent.positive} positive headlines (${sent.positiveMatches} keyword hits) · ${sent.negative} negative headlines (${sent.negativeMatches} keyword hits)</div></div><span class="intelPill">Keyword-based, not an AI fact-check</span></div>`+(sent.headlines.length?'<div style="margin-top:8px">'+sent.headlines.map(h=>`<div class="statusline" style="align-items:flex-start"><span style="flex:1">${escH(h.title)}<div class="muted">${h.score>0?'Positive match: '+escH((h.positiveTerms||[]).slice(0,3).join(', ')):h.score<0?'Negative match: '+escH((h.negativeTerms||[]).slice(0,3).join(', ')):(h.positiveTerms?.length&&h.negativeTerms?.length?'Mixed signals: '+escH([...h.positiveTerms,...h.negativeTerms].slice(0,3).join(', ')):'No clear keyword match')}</div></span></div>`).join('')+'</div>':'<div class="muted" style="margin-top:6px">No headlines were returned. Try the News & announcements panel.</div>');
   }catch(e){if(currentSymbol===sym&&byId('intelSentiment'))byId('intelSentiment').innerHTML='<div class="muted">Headline sentiment is temporarily unavailable. The price and model panels above are still available.</div>';}
 }
 byId('intelRefresh')?.addEventListener('click',()=>{if(currentSymbol&&DB[currentSymbol])renderIntelDashboard(currentSymbol,DB[currentSymbol].bars);});
