@@ -75,6 +75,23 @@
   .tabpane{display:none}
   .tabpane.active{display:block}
   canvas{width:100%;height:220px;background:var(--card2);border-radius:8px}
+
+  /* 3D-style ML network visualization */
+  .neuralHero{position:relative;overflow:hidden;border:1px solid #1f3448;border-radius:14px;background:radial-gradient(ellipse at 50% 45%,#102236 0%,#070b12 62%,#050609 100%);margin:12px 0 14px;isolation:isolate}
+  .neuralHero:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,rgba(4,10,18,.1),transparent 48%,rgba(0,0,0,.22));z-index:1}
+  .neuralHead{position:absolute;left:14px;right:14px;top:12px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;z-index:2;pointer-events:none}
+  .neuralEyebrow{font-size:10px;letter-spacing:.16em;color:#76caff;font-weight:800}
+  .neuralTitle{font-size:16px;font-weight:750;margin-top:4px;color:#eff8ff}
+  .neuralStatus{font-size:10px;color:#8da7bd;border:1px solid #29445c;border-radius:999px;padding:5px 8px;background:rgba(4,13,24,.72);white-space:nowrap}
+  #neuralCanvas{display:block;width:100%;height:290px;background:transparent;touch-action:pan-y}
+  .neuralFoot{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between;padding:0 12px 12px;position:relative;z-index:2}
+  .neuralStages{display:flex;flex-wrap:wrap;gap:7px}
+  .neuralStage{font-size:10px;color:#9db1c4;border:1px solid #26394a;border-radius:6px;padding:5px 7px;background:rgba(7,13,22,.75)}
+  .neuralStage b{color:#e3f4ff;font-weight:650}
+  #neuralPause{font-size:11px;padding:6px 9px;min-height:32px}
+  @media(max-width:640px){#neuralCanvas{height:250px}.neuralTitle{font-size:14px}.neuralStatus{font-size:9px}.neuralHead{left:10px;right:10px;top:10px}.neuralFoot{padding:0 9px 10px}}
+  @media(prefers-reduced-motion:reduce){.neuralHero *{scroll-behavior:auto}}
+
   .settingsGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .footNote{font-size:11.5px;color:var(--sub);margin-top:6px}
   .kv{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px dashed var(--border)}
@@ -494,8 +511,13 @@
     <!-- NEW FEATURES, KEPT IN THE SAME NUMBERED SECTION STYLE -->
     <div class="tabpane" id="tab-mlpred">
       <div class="card"><h3>12 · ML Predictions</h3>
-        <p class="muted">Experimental statistical/ML direction estimates for the selected stock, using the historical candles loaded from your CSV. The model shows 1-, 5- and 20-session horizons when sufficient history is available.</p>
-        <div class="footNote">Predictions are estimates, not calibrated probabilities or guaranteed outcomes. More historical rows do not guarantee predictive value.</div>
+        <p class="muted">Explore a visual representation of how historical market features can flow through a machine-learning model. This animation is illustrative; it is not a live view of internal model weights or proof of forecast accuracy.</p>
+        <div class="neuralHero" id="neuralHero">
+          <div class="neuralHead"><div><div class="neuralEyebrow">MARAK · MODEL VISUALIZATION</div><div class="neuralTitle">3D Neural Network</div></div><span class="neuralStatus" id="neuralStatus">● VISUALIZATION ACTIVE</span></div>
+          <canvas id="neuralCanvas" role="img" aria-label="Animated perspective neural network with connected nodes representing market inputs, model layers, and an output estimate">Neural network visualization.</canvas>
+          <div class="neuralFoot"><div class="neuralStages"><span class="neuralStage"><b>01</b> Market inputs</span><span class="neuralStage"><b>02</b> Hidden layers</span><span class="neuralStage"><b>03</b> Direction estimate</span></div><button class="secondary" id="neuralPause" type="button" aria-pressed="false">Ⅱ Pause animation</button></div>
+        </div>
+        <div class="footNote">Conceptual visualization only. The app's actual estimates depend on the selected stock and historical candles loaded from CSV. Predictions are not calibrated probabilities or guaranteed outcomes.</div>
         <button class="secondary" type="button" data-jump="intelDashboard">Open live ML prediction panel ↑</button>
       </div>
     </div>
@@ -541,6 +563,80 @@
 </main>
 
 <script>
+
+/* ============ Decorative 3D-style neural network visualization ============ */
+(function initNeuralNetworkVisual(){
+  const canvas=document.getElementById('neuralCanvas');
+  const pauseBtn=document.getElementById('neuralPause');
+  const status=document.getElementById('neuralStatus');
+  if(!canvas||!pauseBtn||!status)return;
+  const ctx=canvas.getContext('2d');
+  if(!ctx)return;
+  const reduced=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let width=0,height=0,dpr=1,frame=0,angle=0,paused=!!reduced,last=0;
+  const layers=[5,7,7,5,2];
+  let nodes=[];
+  function resize(){
+    const rect=canvas.getBoundingClientRect();
+    width=Math.max(1,rect.width);height=Math.max(1,rect.height);dpr=Math.min(window.devicePixelRatio||1,2);
+    canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);
+    nodes=[];
+    const xFractions=[.08,.29,.50,.71,.92];
+    layers.forEach((count,li)=>{const layer=[];for(let i=0;i<count;i++){layer.push({x:xFractions[li],y:(i+1)/(count+1),z:(i%2?1:-1)*(.18+((i*7+li*3)%5)*.045),li,i});}nodes.push(layer);});
+    draw();
+  }
+  function project(n,t){
+    const y=(n.y-.5)*2;
+    const z=n.z;
+    const x=(n.x-.5)*2.1;
+    const rot=angle+t;
+    const xr=x*Math.cos(rot)-z*Math.sin(rot);
+    const zr=x*Math.sin(rot)+z*Math.cos(rot);
+    const perspective=1/(1+zr*.19);
+    return {x:width*.5+xr*width*.43*perspective,y:height*.51+y*height*.37*perspective,z:zr,scale:perspective};
+  }
+  function draw(){
+    ctx.clearRect(0,0,width,height);
+    const all=[];nodes.forEach(layer=>layer.forEach(n=>all.push({n,p:project(n,0)})));
+    // Fine perspective grid gives depth without competing with app data.
+    ctx.save();ctx.strokeStyle='rgba(77,151,201,.09)';ctx.lineWidth=1;
+    for(let i=0;i<7;i++){const y=height*.55+i*i*height*.009;ctx.beginPath();ctx.moveTo(width*.08,y);ctx.lineTo(width*.92,y);ctx.stroke();}
+    for(let i=0;i<9;i++){const x=width*(.12+i*.095);ctx.beginPath();ctx.moveTo(width*.5+(x-width*.5)*.5,height*.26);ctx.lineTo(x,height*.86);ctx.stroke();}ctx.restore();
+    // Connections between adjacent layers.
+    for(let li=0;li<nodes.length-1;li++){
+      nodes[li].forEach((a,ai)=>nodes[li+1].forEach((b,bi)=>{
+        const pa=project(a,0),pb=project(b,0);const pulse=(Math.sin(angle*2+li*1.7+ai*.6+bi*.35)+1)/2;
+        ctx.beginPath();ctx.moveTo(pa.x,pa.y);ctx.lineTo(pb.x,pb.y);
+        ctx.strokeStyle=`rgba(63,174,236,${.09+pulse*.18})`;ctx.lineWidth=.55+pulse*.35;ctx.stroke();
+      }));
+    }
+    // Animated signal particles travel along selected connections.
+    if(!paused){for(let li=0;li<nodes.length-1;li++)for(let k=0;k<3;k++){
+      const a=nodes[li][(k*2+li)%nodes[li].length],b=nodes[li+1][(k*3+1)%nodes[li+1].length];
+      const p=(angle*1.8+k*.31+li*.22)%1,pa=project(a,0),pb=project(b,0);
+      const x=pa.x+(pb.x-pa.x)*p,y=pa.y+(pb.y-pa.y)*p;
+      ctx.beginPath();ctx.arc(x,y,1.5+(Math.sin(angle*3+k)+1)*.5,0,Math.PI*2);ctx.fillStyle='rgba(129,220,255,.95)';ctx.fill();
+    }}
+    // Nodes: soft cyan cores, brighter output layer.
+    all.sort((a,b)=>a.p.z-b.p.z).forEach(({n,p})=>{
+      const r=(n.li===4?4.2:2.8)*p.scale;
+      ctx.beginPath();ctx.arc(p.x,p.y,r*2.5,0,Math.PI*2);ctx.fillStyle=n.li===4?'rgba(91,235,183,.10)':'rgba(67,174,255,.10)';ctx.fill();
+      ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fillStyle=n.li===4?'#7ef2c1':'#7bd5ff';ctx.fill();
+      ctx.beginPath();ctx.arc(p.x-r*.25,p.y-r*.25,Math.max(.6,r*.3),0,Math.PI*2);ctx.fillStyle='#ffffff';ctx.fill();
+    });
+    // Layer captions, kept inside the canvas.
+    ctx.textAlign='center';ctx.font='10px system-ui, sans-serif';
+    const labels=['INPUTS','FEATURES','HIDDEN LAYER','SIGNAL','OUTPUT'];
+    labels.forEach((label,i)=>{ctx.fillStyle='rgba(175,211,236,.76)';ctx.fillText(label,width*([.08,.29,.50,.71,.92][i]),height*.91);});
+  }
+  function tick(ts){if(paused)return;if(ts-last>28){last=ts;angle+=.006;draw();}frame=requestAnimationFrame(tick);}
+  function setPaused(next){paused=next;pauseBtn.textContent=paused?'▶ Resume animation':'Ⅱ Pause animation';pauseBtn.setAttribute('aria-pressed',String(paused));status.textContent=paused?'Ⅱ VISUALIZATION PAUSED':'● VISUALIZATION ACTIVE';if(frame)cancelAnimationFrame(frame);frame=0;if(!paused){last=0;frame=requestAnimationFrame(tick);}else draw();}
+  pauseBtn.addEventListener('click',()=>setPaused(!paused));
+  if('ResizeObserver'in window)new ResizeObserver(resize).observe(canvas);else window.addEventListener('resize',resize);
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){if(frame)cancelAnimationFrame(frame);frame=0;}else if(!paused){last=0;frame=requestAnimationFrame(tick);}});
+  resize();setPaused(paused);
+})();
+
 /* ============ PWA: real service worker (proper auto-update), install prompt, share ============ */
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').then((reg) => {
@@ -2910,17 +3006,12 @@ async function runMLWalkForwardBacktest(bars,horizon=1,threshold=0.55,roundTripC
     if(predictions.length%3===0) await new Promise(resolve=>setTimeout(resolve,0));
   }
   if(!predictions.length)return {ready:false,n:0,availableRows:rows.length,horizon,reason:'Not enough historical observations with a leakage-safe training window.'};
-  const correct=predictions.filter(x=>(x.p>=.5?1:0)===x.actual).length,baseCorrect=predictions.filter(x=>x.baseline===x.actual).length;
-  // Evaluate long and short signals separately; neutral forecasts stay out of the market.
-  const longTrades=predictions.filter(x=>x.p>=threshold),shortTrades=predictions.filter(x=>x.p<=1-threshold);
-  const longWins=longTrades.filter(x=>x.raw-roundTripCost>0).length,shortWins=shortTrades.filter(x=>-x.raw-roundTripCost>0).length;
-  const trades=[...longTrades.map(x=>({...x,net:x.raw-roundTripCost,side:'LONG'})),...shortTrades.map(x=>({...x,net:-x.raw-roundTripCost,side:'SHORT'}))].sort((a,b)=>a.signalDate.localeCompare(b.signalDate));
+  const correct=predictions.filter(x=>(x.p>=.5?1:0)===x.actual).length,baseCorrect=predictions.filter(x=>x.baseline===x.actual).length,trades=predictions.filter(x=>x.trade),wins=trades.filter(x=>x.net>0).length;
   const brier=predictions.reduce((a,x)=>a+(x.p-x.actual)**2,0)/predictions.length;
   const logLoss=predictions.reduce((a,x)=>{const q=Math.max(1e-7,Math.min(1-1e-7,x.p));return a-(x.actual?Math.log(q):Math.log(1-q));},0)/predictions.length;
   let equity=1,peak=1,maxDD=0,benchmark=1;
-  for(const x of predictions){const net=x.p>=threshold?x.raw-roundTripCost:x.p<=1-threshold?-x.raw-roundTripCost:0;equity*=1+net;benchmark*=1+x.raw;peak=Math.max(peak,equity);maxDD=Math.max(maxDD,(peak-equity)/peak);}
-  const longEquity=longTrades.reduce((e,x)=>e*(1+x.raw-roundTripCost),1),shortEquity=shortTrades.reduce((e,x)=>e*(1-x.raw-roundTripCost),1);
-  const result={ready:true,n:predictions.length,availableRows:rows.length,horizon,accuracy:correct/predictions.length,baselineAccuracy:baseCorrect/predictions.length,brier,logLoss,upRate:predictions.reduce((a,x)=>a+x.actual,0)/predictions.length,trades:trades.length,longTrades:longTrades.length,shortTrades:shortTrades.length,longWinRate:longTrades.length?longWins/longTrades.length:null,shortWinRate:shortTrades.length?shortWins/shortTrades.length:null,longReturn:longEquity-1,shortReturn:shortEquity-1,winRate:trades.length?trades.filter(x=>x.net>0).length/trades.length:null,strategyReturn:trades.reduce((e,x)=>e*(1+x.net),1)-1,benchmarkReturn:benchmark-1,maxDrawdown:maxDD,threshold,from:predictions[0].signalDate,to:predictions[predictions.length-1].date,cost:roundTripCost,independentSpacing:horizon,minimumSampleForInterpretation:30,execution:'signal close to horizon close; illustrative, not directly executable'};
+  for(const x of predictions){equity*=1+x.net;benchmark*=1+x.raw;peak=Math.max(peak,equity);maxDD=Math.max(maxDD,(peak-equity)/peak);}
+  const result={ready:true,n:predictions.length,availableRows:rows.length,horizon,accuracy:correct/predictions.length,baselineAccuracy:baseCorrect/predictions.length,brier,logLoss,upRate:predictions.reduce((a,x)=>a+x.actual,0)/predictions.length,trades:trades.length,winRate:trades.length?wins/trades.length:null,strategyReturn:equity-1,benchmarkReturn:benchmark-1,maxDrawdown:maxDD,threshold,from:predictions[0].signalDate,to:predictions[predictions.length-1].date,cost:roundTripCost,independentSpacing:horizon,minimumSampleForInterpretation:30,execution:'signal close to horizon close; illustrative, not directly executable'};
   msiBacktestCache.set(key,result); if(msiBacktestCache.size>18)msiBacktestCache.delete(msiBacktestCache.keys().next().value);
   return result;
 }
@@ -2940,10 +3031,10 @@ async function renderIntelDashboard(sym,bars){
       const metric=(bt,label)=>{
         if(!bt.ready)return `<div class="intelMetric"><div class="k">${label} historical test</div><div class="v">Not enough data</div><div class="d">${escH(bt.reason||'More CSV history is needed.')}</div></div>`;
         const sampleNote=bt.n<30?`<div class="d" style="color:var(--warn,#a66)">Only ${bt.n} non-overlapping test observations; too few for a reliable conclusion (30 is a minimum reporting guard, not proof).</div>`:`<div class="d">${bt.n} non-overlapping test observations; still a historical estimate, not a guarantee.</div>`;
-        return `<div class="intelMetric" style="grid-column:1/-1"><div class="k">${label} walk-forward test</div>${sampleNote}<div class="intelGrid"><div><div class="k">Directional accuracy</div><div class="v">${(bt.accuracy*100).toFixed(1)}%</div></div><div><div class="k">Baseline accuracy</div><div class="v">${(bt.baselineAccuracy*100).toFixed(1)}%</div></div><div><div class="k">Brier score</div><div class="v">${bt.brier.toFixed(3)}</div><div class="d">Lower is better.</div></div><div><div class="k">Log loss</div><div class="v">${bt.logLoss.toFixed(3)}</div><div class="d">Lower is better.</div></div><div><div class="k">Total directional trades</div><div class="v">${bt.trades}</div><div class="d">${bt.longTrades} LONG · ${bt.shortTrades} SHORT</div></div><div><div class="k">LONG win rate</div><div class="v">${bt.longWinRate==null?'—':(bt.longWinRate*100).toFixed(1)+'%'}</div><div class="d">Return ${pct(bt.longReturn)}</div></div><div><div class="k">SHORT win rate</div><div class="v">${bt.shortWinRate==null?'—':(bt.shortWinRate*100).toFixed(1)+'%'}</div><div class="d">Return ${pct(bt.shortReturn)}</div></div><div><div class="k">Illustrative combined return</div><div class="v ${bt.strategyReturn>=0?'up':'down'}">${pct(bt.strategyReturn)}</div></div><div><div class="k">Benchmark over sampled windows</div><div class="v ${bt.benchmarkReturn>=0?'up':'down'}">${pct(bt.benchmarkReturn)}</div></div><div><div class="k">Maximum drawdown</div><div class="v down">${(bt.maxDrawdown*100).toFixed(2)}%</div></div></div><div class="d">Signal window: ${escH(bt.from)} to ${escH(bt.to)} · ${bt.n} test observations spaced ${bt.horizon} session(s) apart · assumed round-trip cost ${(bt.cost*100).toFixed(2)}%. Training uses ${MSI_ML_EPOCHS} epochs and learning rate ${MSI_ML_LR}, matching the live model settings.</div></div>`;
+        return `<div class="intelMetric" style="grid-column:1/-1"><div class="k">${label} walk-forward test</div>${sampleNote}<div class="intelGrid"><div><div class="k">Directional accuracy</div><div class="v">${(bt.accuracy*100).toFixed(1)}%</div></div><div><div class="k">Baseline accuracy</div><div class="v">${(bt.baselineAccuracy*100).toFixed(1)}%</div></div><div><div class="k">Brier score</div><div class="v">${bt.brier.toFixed(3)}</div><div class="d">Lower is better.</div></div><div><div class="k">Log loss</div><div class="v">${bt.logLoss.toFixed(3)}</div><div class="d">Lower is better.</div></div><div><div class="k">Trades ≥ ${(bt.threshold*100).toFixed(0)}%</div><div class="v">${bt.trades}</div></div><div><div class="k">Win rate</div><div class="v">${bt.winRate==null?'—':(bt.winRate*100).toFixed(1)+'%'}</div></div><div><div class="k">Illustrative strategy return</div><div class="v ${bt.strategyReturn>=0?'up':'down'}">${pct(bt.strategyReturn)}</div></div><div><div class="k">Benchmark over sampled windows</div><div class="v ${bt.benchmarkReturn>=0?'up':'down'}">${pct(bt.benchmarkReturn)}</div></div><div><div class="k">Maximum drawdown</div><div class="v down">${(bt.maxDrawdown*100).toFixed(2)}%</div></div></div><div class="d">Signal window: ${escH(bt.from)} to ${escH(bt.to)} · ${bt.n} test observations spaced ${bt.horizon} session(s) apart · assumed round-trip cost ${(bt.cost*100).toFixed(2)}%. Training uses ${MSI_ML_EPOCHS} epochs and learning rate ${MSI_ML_LR}, matching the live model settings.</div></div>`;
       };
       [1,5,20].forEach((h,idx)=>{const status=byId('validationStatus'+h),bt=results[idx];if(status){status.textContent=!bt.ready?'Walk-forward validation unavailable: '+(bt.reason||'not enough eligible history')+'. Forecast above is experimental only.':bt.n<30?`Walk-forward validation: ${bt.n} non-overlapping test observations; fewer than the 30-observation reporting minimum. Forecast remains experimental and is not validated.`:`Walk-forward validation: ${bt.n} non-overlapping test observations. This is preliminary evidence only; probability calibration and future performance are not established.`;}});
-      btEl.innerHTML=results.map((r,i)=>metric(r,['1-session','5-session','20-session'][i])).join('')+`<div class="footNote">Leakage controls: every forecast is generated using earlier data only; training rows are excluded if their target close would not yet be known at the test forecast date. Test forecast origins are spaced by the forecast horizon, reducing overlap between test outcome windows. Results can still be noisy, especially with small samples. Brier score and log loss do not alone prove probability calibration. LONG trades use p ≥ threshold; SHORT trades use p ≤ 1 − threshold; other forecasts remain flat. LONG and SHORT metrics are reported separately. Returns assume signal-close to horizon-close fills, which are illustrative and not guaranteed executable; 0.20% round-trip cost excludes taxes, realistic slippage, market impact, borrow costs and liquidity constraints. Shorting may not be available for every symbol or holding period. Baseline is the prior training-window majority class. Historical performance is not a guarantee of future results.</div>`;
+      btEl.innerHTML=results.map((r,i)=>metric(r,['1-session','5-session','20-session'][i])).join('')+`<div class="footNote">Leakage controls: every forecast is generated using earlier data only; training rows are excluded if their target close would not yet be known at the test forecast date. Test forecast origins are spaced by the forecast horizon, reducing overlap between test outcome windows. Results can still be noisy, especially with small samples. Brier score and log loss do not alone prove probability calibration. Returns assume signal-close to horizon-close fills, which are illustrative and not guaranteed executable; 0.20% round-trip cost excludes taxes, slippage beyond that assumption, market impact and liquidity constraints. Baseline is the prior training-window majority class. Historical performance is not a guarantee of future results.</div>`;
     }
   }
   try{
