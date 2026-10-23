@@ -85,6 +85,18 @@
   .neuralStatus{font-size:10px;color:#8da7bd;border:1px solid #29445c;border-radius:999px;padding:5px 8px;background:rgba(4,13,24,.72);white-space:nowrap}
   #neuralCanvas{display:block;width:100%;height:360px;background:transparent;touch-action:none;cursor:grab;position:relative;z-index:0}
   .neuralFoot{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between;padding:0 12px 12px;position:relative;z-index:2}
+  .neuralLivePanel{position:relative;z-index:2;margin:0 12px 12px;padding:10px;border:1px solid rgba(255,70,93,.25);border-radius:10px;background:rgba(8,2,5,.84)}
+  .neuralLiveTop{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+  .neuralLiveLabel{font-size:10px;letter-spacing:.12em;color:#ff9aa5;font-weight:800}
+  .neuralLiveSymbol{font-size:11px;color:#f3d9dd;font-weight:700}
+  .neuralLiveGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+  .neuralLiveMetric{min-width:0;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.025);border-radius:7px;padding:7px}
+  .neuralLiveMetric .k{font-size:9px;color:#a99a9e;letter-spacing:.04em}
+  .neuralLiveMetric .v{font-size:12px;font-weight:750;color:#f8eef0;margin-top:3px;overflow-wrap:anywhere}
+  .neuralLiveMetric .d{font-size:9px;color:#a99a9e;margin-top:3px;line-height:1.35}
+  .neuralLiveNote{font-size:10px;line-height:1.45;color:#a99a9e;margin-top:8px}
+  @media(max-width:480px){.neuralLiveGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.neuralLiveMetric .v{font-size:11px}}
+
   .neuralStages{display:flex;flex-wrap:wrap;gap:7px}
   .neuralStage{font-size:10px;color:#9db1c4;border:1px solid #26394a;border-radius:6px;padding:5px 7px;background:rgba(7,13,22,.75)}
   .neuralStage b{color:#e3f4ff;font-weight:650}
@@ -629,7 +641,19 @@ table th{color:#f0b4b8}
         <p class="muted">Explore a visual representation of how historical market features can flow through a machine-learning model. This animation is illustrative; it is not a live view of internal model weights or proof of forecast accuracy.</p>
         <div class="neuralHero" id="neuralHero">
           <div class="neuralHead"><div><div class="neuralEyebrow">MARAK · MODEL VISUALIZATION</div><div class="neuralTitle">Crimson 3D Neural Network</div><div style="font-size:10px;color:#ff9aa5;margin-top:4px;letter-spacing:.08em">✦ TOUCH · DRAG · ROTATE</div></div><span class="neuralStatus" id="neuralStatus">● VISUALIZATION ACTIVE</span></div>
-          <canvas id="neuralCanvas" role="img" aria-label="Animated perspective neural network with connected nodes representing market inputs, model layers, and an output estimate">Neural network visualization.</canvas>
+          <canvas id="neuralCanvas" role="img" aria-label="Interactive 3D market-factor visualization; node highlights update from actual available model inputs">Neural network visualization.</canvas>
+          <div class="neuralLivePanel" id="neuralLivePanel" aria-live="polite">
+            <div class="neuralLiveTop"><span class="neuralLiveLabel">LIVE MODEL INPUTS</span><span class="neuralLiveSymbol" id="neuralLiveSymbol">Waiting for stock analysis</span></div>
+            <div class="neuralLiveGrid">
+              <div class="neuralLiveMetric"><div class="k">5-session return</div><div class="v" id="neuralFactor5d">—</div><div class="d">Price momentum</div></div>
+              <div class="neuralLiveMetric"><div class="k">20-session return</div><div class="v" id="neuralFactor20d">—</div><div class="d">Medium-term move</div></div>
+              <div class="neuralLiveMetric"><div class="k">Return volatility</div><div class="v" id="neuralFactorVol">—</div><div class="d">Recent daily variation</div></div>
+              <div class="neuralLiveMetric"><div class="k">Volume vs average</div><div class="v" id="neuralFactorVolume">—</div><div class="d">Latest / 20-session average</div></div>
+              <div class="neuralLiveMetric"><div class="k">SMA relationship</div><div class="v" id="neuralFactorTrend">—</div><div class="d">20-session vs 50-session</div></div>
+              <div class="neuralLiveMetric"><div class="k">1-session model</div><div class="v" id="neuralFactorForecast">—</div><div class="d" id="neuralFactorForecastDetail">Actual model output when available</div></div>
+            </div>
+            <div class="neuralLiveNote" id="neuralLiveNote">This panel is waiting for a selected stock's calculated data. Animated connections are illustrative; highlighted node groups reflect the five actual feature inputs used by the direction model.</div>
+          </div>
           <div class="neuralFoot"><div class="neuralStages"><span class="neuralStage"><b>01</b> Market inputs</span><span class="neuralStage"><b>02</b> Hidden layers</span><span class="neuralStage"><b>03</b> Direction estimate</span></div><button class="secondary" id="neuralPause" type="button" aria-pressed="false">Ⅱ Pause animation</button></div>
         </div>
         <div class="footNote">Conceptual visualization only. The app's actual estimates depend on the selected stock and historical candles loaded from CSV. Predictions are not calibrated probabilities or guaranteed outcomes.</div>
@@ -689,6 +713,7 @@ table th{color:#f0b4b8}
   const reduced=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let width=0,height=0,dpr=1,frame=0,angleY=0,angleX=-.12,paused=!!reduced,last=0,phase=0;
   const pointer={x:-1000,y:-1000,down:false,lastX:0,lastY:0,active:false};
+  let liveFactorScores=[0,0,0,0,0],liveDataConnected=false;
   const nodes=[],edges=[];
   // Fibonacci-sphere points create a dense, orb-like network with real 3D depth.
   const count=92, golden=Math.PI*(3-Math.sqrt(5));
@@ -702,6 +727,33 @@ table th{color:#f0b4b8}
     const near=nodes.map((b,j)=>({j,d:(a.x-b.x)**2+(a.y-b.y)**2+(a.z-b.z)**2})).filter(v=>v.j!==i).sort((a,b)=>a.d-b.d).slice(0,4);
     near.forEach(v=>{const lo=Math.min(i,v.j),hi=Math.max(i,v.j),key=lo+'-'+hi;if(!edgeSet.has(key)){edgeSet.add(key);edges.push({a:lo,b:hi,seed:(lo*13+hi*7)%101/101});}});
   });
+  window.updateMSINeuralState=function(data){
+    if(!data||!Array.isArray(data.features))return;
+    const put=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value;};
+    const pct=v=>Number.isFinite(v)?(v>=0?'+':'')+(v*100).toFixed(2)+'%':'—';
+    const hasFeatures=data.features.length>=5&&data.features.slice(0,5).every(Number.isFinite);
+    liveDataConnected=hasFeatures;
+    liveFactorScores=hasFeatures?data.features.slice(0,5).map(v=>Math.max(-1,Math.min(1,v))):[0,0,0,0,0];
+    put('neuralLiveSymbol',(data.symbol||'Selected stock')+' · '+(data.date||'latest loaded session'));
+    if(!hasFeatures){
+      ['neuralFactor5d','neuralFactor20d','neuralFactorVol','neuralFactorVolume','neuralFactorTrend'].forEach(id=>put(id,'—'));
+      put('neuralFactorForecast','Unavailable');
+      put('neuralFactorForecastDetail','Load sufficient price history for model inputs');
+      put('neuralStatus','● INSUFFICIENT DATA');
+      put('neuralLiveNote','A stock is selected, but the current feature vector is unavailable. Load sufficient historical candles. Animated connections remain illustrative.');
+      draw();return;
+    }
+    put('neuralFactor5d',pct(data.features[0]));
+    put('neuralFactor20d',pct(data.features[1]));
+    put('neuralFactorVol',Number.isFinite(data.features[2])?(data.features[2]*100).toFixed(2)+'%':'—');
+    put('neuralFactorVolume',Number.isFinite(data.features[3])?((1+data.features[3])*100).toFixed(0)+'%':'—');
+    put('neuralFactorTrend',Number.isFinite(data.features[4])?(data.features[4]>=0?'Above':'Below')+' · '+pct(data.features[4]):'—');
+    put('neuralFactorForecast',data.modelReady?(data.probability>=.55?'↑ Higher':data.probability<=.45?'↓ Lower':'↔ Unclear'):'Unavailable');
+    put('neuralFactorForecastDetail',data.modelReady?('Model-estimated higher-close probability '+(data.probability*100).toFixed(0)+'% · not calibrated'):'Insufficient eligible history for model output');
+    put('neuralStatus','● LIVE DATA CONNECTED');
+    put('neuralLiveNote','Factor node groups now reflect actual calculated inputs from the selected stock. This is a feature-input visualization, not a deep neural network; animated links do not represent learned neural connections.');
+    draw();
+  };
   function resize(){const r=canvas.getBoundingClientRect();width=Math.max(1,r.width);height=Math.max(1,r.height);dpr=Math.min(window.devicePixelRatio||1,2);canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);draw();}
   function project(n){
     const cy=Math.cos(angleY),sy=Math.sin(angleY),cx=Math.cos(angleX),sx=Math.sin(angleX);
@@ -744,7 +796,11 @@ table th{color:#f0b4b8}
       const depth=(p.z+1.4)/2.8,r=(1.35+depth*2.1)*p.scale;
       ctx.beginPath();ctx.arc(p.x,p.y,r*5.4,0,Math.PI*2);ctx.fillStyle=`rgba(255,30,57,${.025+depth*.07})`;ctx.fill();
       ctx.beginPath();ctx.arc(p.x,p.y,r*2.25,0,Math.PI*2);ctx.fillStyle=`rgba(255,48,70,${.12+depth*.16})`;ctx.fill();
-      ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fillStyle=depth>.68?'#ff9aa5':depth>.35?'#ff465d':'#a9152a';ctx.fill();
+      const factor=liveFactorScores[n.layer]||0;
+      const factorStrength=Math.min(1,Math.abs(factor));
+      const baseColor=factor>0.12?'255,105,115':factor<-.12?'255,185,92':'255,70,93';
+      ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);
+      ctx.fillStyle=liveDataConnected?`rgba(${baseColor},${Math.min(1,.48+factorStrength*.48)})`:(depth>.68?'#ff9aa5':depth>.35?'#ff465d':'#a9152a');ctx.fill();
       if(depth>.55){ctx.beginPath();ctx.arc(p.x-r*.24,p.y-r*.27,Math.max(.45,r*.27),0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,.95)';ctx.fill();}
     });
     // A small bright core and a rotating sweep imply active computation (visual only).
@@ -3156,6 +3212,10 @@ async function renderIntelDashboard(sym,bars){
   const el=byId('intelDashboardBody');if(!el)return;
   const last=bars[bars.length-1],prev=bars[bars.length-2],chg=prev?(last.close/prev.close-1)*100:0;
   const model=runDirectionModel(bars,1),model5=runDirectionModel(bars,5),model20=runDirectionModel(bars,20),calc=computeAll(bars),i=bars.length-1,rsi=calc.rsi[i],atrp=calc.atr[i]!=null?calc.atr[i]/last.close*100:null;
+  const neuralFeatures=currentMLFeatures(bars);
+  if(typeof window.updateMSINeuralState==='function'){
+    window.updateMSINeuralState({symbol:sym,date:last.date,features:neuralFeatures||[],modelReady:model.ready,probability:model.p});
+  }
   const horizonHtml=(m,label)=>`<div class="intelMetric" id="forecastCard${label.split('-')[0]}"><div class="k">${label} direction estimate</div><div class="v ${m.ready?(m.p>=.55?'up':m.p<=.45?'down':''):''}">${m.ready?(m.p>=.55?'↑ Higher':m.p<=.45?'↓ Lower':'↔ Unclear'):'Temporarily unavailable'}</div><div class="d">${m.ready?`Model-estimated probability of a higher close: ${(m.p*100).toFixed(0)}% · trained on ${m.n} historical examples; experimental and not calibrated.`:`Insufficient history (${m.n} examples; at least 80 training examples are required).`}</div><div class="d" id="validationStatus${label.split('-')[0]}">Walk-forward validation is running below.</div></div>`;
   const modelHtml=horizonHtml(model,'1-session')+horizonHtml(model5,'5-session')+horizonHtml(model20,'20-session');
   el.innerHTML=`<div class="intelGrid"><div class="intelMetric"><div class="k">Last loaded close</div><div class="v">₹${Number(last.close).toLocaleString('en-IN',{maximumFractionDigits:2})}</div><div class="d">${escH(last.date)} · ${chg>=0?'+':''}${chg.toFixed(2)}% vs prior loaded session</div></div>${modelHtml}<div class="intelMetric"><div class="k">Risk snapshot</div><div class="v">${atrp==null?'—':atrp.toFixed(2)+'% ATR'}</div><div class="d">RSI(14): ${rsi==null?'n/a':rsi.toFixed(1)} · ATR as % of last close is a volatility gauge, not a loss limit.</div></div><div class="intelMetric" style="grid-column:1/-1"><div class="k">Automatic historical model test</div><div id="intelBacktest"><div class="d">Runs automatically using only earlier CSV history; large datasets may take a moment.</div></div></div><div class="intelMetric" style="grid-column:1/-1"><div class="k">Headline sentiment</div><div id="intelSentiment"><div class="v">Loading headlines…</div><div class="d">Searching recent news for ${escH(sym)}.</div></div></div></div>`;
@@ -3178,6 +3238,7 @@ async function renderIntelDashboard(sym,bars){
     const q=getNewsTerm(sym)+' when:14d', items=await fetchNewsItems(q);if(currentSymbol!==sym)return;
     const sent=headlineSentiment(items),sentEl=byId('intelSentiment');if(!sentEl)return;
     const cls=sent.score>=20?'up':sent.score<=-20?'down':'';
+    const neuralNote=byId('neuralLiveNote');if(neuralNote)neuralNote.textContent+=' News sentiment is shown separately in the Intelligence Dashboard and is not one of the five inputs used by the current logistic-regression direction model.';
     sentEl.innerHTML=`<div class="row" style="align-items:center;gap:12px"><div class="v ${cls}" style="margin:0">${sent.score>0?'+':''}${sent.score}</div><div><b>${escH(sent.label)}</b><div class="d">${sent.count} headlines scanned · ${sent.positive} positive headlines (${sent.positiveMatches} keyword hits) · ${sent.negative} negative headlines (${sent.negativeMatches} keyword hits)</div></div><span class="intelPill">Heuristic keyword hint · not AI/context-aware</span></div>`+(sent.headlines.length?'<div style="margin-top:8px">'+sent.headlines.map(h=>`<div class="statusline" style="align-items:flex-start"><span style="flex:1">${escH(h.title)}<div class="muted">${h.score>0?'Positive match: '+escH((h.positiveTerms||[]).slice(0,3).join(', ')):h.score<0?'Negative match: '+escH((h.negativeTerms||[]).slice(0,3).join(', ')):(h.positiveTerms?.length&&h.negativeTerms?.length?'Mixed signals: '+escH([...h.positiveTerms,...h.negativeTerms].slice(0,3).join(', ')):'No clear keyword match')}</div></span></div>`).join('')+'</div>':'<div class="muted" style="margin-top:6px">No headlines were returned. Try the News & announcements panel.</div>');
   }catch(e){if(currentSymbol===sym&&byId('intelSentiment'))byId('intelSentiment').innerHTML='<div class="muted">Headline sentiment is temporarily unavailable. The price and model panels above are still available.</div>';}
 }
