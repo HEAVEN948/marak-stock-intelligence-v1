@@ -113,27 +113,27 @@
 
 /* ===== MARAK HYBRID MOBILE REDESIGN (C) ===== */
 :root{
-  --navy:#061326;--navy2:#091b32;--bg:#050d18;--card:#0a192b;--card2:#0d2239;
-  --border:#1b3854;--text:#eaf3ff;--sub:#9db2ca;--blue:#247bff;--blue2:#45a1ff;
-  --green:#00d6a0;--orange:#f6ad55;--red:#ff667e;--amber:#ffc857;
+  --navy:#100707;--navy2:#190909;--bg:#070303;--card:#140909;--card2:#1c0b0b;
+  --border:#592020;--text:#fff1f1;--sub:#c9a7a7;--blue:#d92735;--blue2:#ff4854;
+  --green:#00d6a0;--orange:#f6ad55;--red:#ff3347;--amber:#ffc857;
 }
-html,body{background:radial-gradient(ellipse at 50% -15%,#102b4c 0%,#071323 48%,#040a12 100%);min-height:100%;}
+html,body{background:radial-gradient(ellipse at 50% -15%,#260909 0%,#100505 48%,#040202 100%);min-height:100%;}
 body{font-family:Inter,Roboto,"Segoe UI",system-ui,sans-serif;line-height:1.45;letter-spacing:.005em}
-header{padding:13px 16px;background:rgba(5,15,29,.94);backdrop-filter:blur(16px);border-bottom:1px solid #1b3854;box-shadow:0 8px 28px #0004}
-.logo{border-radius:12px;background:linear-gradient(145deg,#1c80ff,#00c6b2);box-shadow:0 0 24px #167cff35;color:white}
+header{padding:13px 16px;background:rgba(18,5,6,.92);backdrop-filter:blur(16px);border-bottom:1px solid #592020;box-shadow:0 8px 28px #0008}
+.logo{border-radius:12px;background:linear-gradient(145deg,#ff3347,#8f101b);box-shadow:0 0 24px #ff263b45;color:white}
 .brand{font-size:16px;letter-spacing:-.025em}.brand small{color:#83a8d2;font-size:10px;margin-top:2px}
 #indexTicker{background:#09192a!important;border-bottom-color:#1a3550!important;color:#d9eaff;gap:18px!important}
 main{max-width:1180px;padding:18px 16px 34px}
-.card{background:linear-gradient(145deg,rgba(12,31,52,.96),rgba(7,19,34,.98));border:1px solid #1b3a58;border-radius:17px;padding:16px;box-shadow:0 10px 28px #0002,inset 0 1px #ffffff05;margin-bottom:14px}
+.card{background:linear-gradient(145deg,rgba(25,10,11,.88),rgba(9,4,5,.91));border:1px solid #572024;border-radius:17px;padding:16px;box-shadow:0 10px 28px #0005,inset 0 1px #ffffff05;margin-bottom:14px}
 .card h3{color:#9fc6f2;letter-spacing:.07em;font-size:12px}
 input,select,textarea{background:#07172a;border-color:#294866;border-radius:10px;min-height:40px}
-button{border-radius:10px;background:linear-gradient(135deg,#1977ff,#2856e8);box-shadow:0 5px 16px #176dff22;min-height:38px}
+button{border-radius:10px;background:linear-gradient(135deg,#ff394b,#a80f20);box-shadow:0 5px 16px #ff1f3628;min-height:38px}
 button.secondary{background:#102740;border:1px solid #294866;box-shadow:none}
 button.ghost{background:rgba(8,24,41,.7);border:1px solid #294866;box-shadow:none}
 .tabbar{gap:8px;padding:5px 2px 10px;margin:12px 0 14px;scrollbar-width:none}
 .tabbar::-webkit-scrollbar{display:none}
 .tabbtn{background:#0b1e32;border:1px solid #1d3c59;border-radius:999px;padding:10px 14px;color:#a8bfd9;min-height:40px}
-.tabbtn.active{background:linear-gradient(135deg,#1685ff,#3158f4);border-color:#4e9bff;box-shadow:0 5px 18px #167bff40;color:#fff}
+.tabbtn.active{background:linear-gradient(135deg,#f33b4d,#8f101b);border-color:#ff5b67;box-shadow:0 5px 18px #ff263b40;color:#fff}
 .tabpane.active{animation:hybridPaneIn .24s ease-out}
 @keyframes hybridPaneIn{from{opacity:.55;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 .intelMetric{background:linear-gradient(145deg,#102844,#09192a);border-color:#214462;border-radius:14px}
@@ -179,17 +179,36 @@ table th{color:#9dbce0}table td,table th{border-bottom-color:#1b3854}
 
 
 /* ===== LIVE FULL-APP 3D NEURAL BACKGROUND ===== */
-html,body{background:#040b17!important}
+html,body{background:#070202!important}
 body{position:relative;isolation:isolate;background:transparent!important}
-#neuralBg{position:fixed;inset:0;width:100%;height:100%;z-index:-1;display:block;pointer-events:none;background:#040b17;opacity:.82}
+#neuralBg{position:fixed;inset:0;width:100%;height:100%;z-index:-1;display:block;pointer-events:none;background:#070202;opacity:.9}
 body>header,body>main,body>.hybridWelcome,body>#indexTicker,body>footer{position:relative;z-index:1}
-header{background:rgba(5,15,29,.82)!important;backdrop-filter:blur(10px)}
-.card{background:linear-gradient(145deg,rgba(12,31,52,.83),rgba(7,19,34,.88))!important;backdrop-filter:blur(5px)}
-.hybridWelcome{background:radial-gradient(ellipse at 90% 0%,rgba(22,76,122,.48),transparent 44%),linear-gradient(115deg,rgba(13,37,64,.84),rgba(9,23,40,.87))!important;backdrop-filter:blur(6px)}
+header{background:rgba(18,5,6,.78)!important;backdrop-filter:blur(10px)}
+.card{background:linear-gradient(145deg,rgba(25,10,11,.82),rgba(9,4,5,.87))!important;backdrop-filter:blur(5px)}
+.hybridWelcome{background:radial-gradient(ellipse at 90% 0%,rgba(150,15,28,.32),transparent 44%),linear-gradient(115deg,rgba(34,10,12,.86),rgba(12,5,6,.89))!important;backdrop-filter:blur(6px)}
 #indexTicker{background:rgba(9,25,42,.86)!important;backdrop-filter:blur(8px)}
 .tabbar{background:rgba(5,13,24,.82)!important;backdrop-filter:blur(10px)}
 #lockScreen,#settingsModal{z-index:5000}
 @media(prefers-reduced-motion:reduce){#neuralBg{opacity:.35}}
+
+/* ===== CRIMSON RED PREMIUM SKIN ===== */
+:root{color-scheme:dark}
+body{color:#fff0f0}
+.card h3,.hybridWelcome .eyebrow{color:#ff858c}
+input,select,textarea{background:#100708;border-color:#592329;color:#fff0f0}
+.tabbtn{background:#16090a;border-color:#4b1b20;color:#d7b5b7}
+.intelMetric{background:linear-gradient(145deg,#210d0f,#100607);border-color:#542026}
+.intelMetric .k{color:#d6a5a8}
+#chat{background:#100708;border-color:#542026}
+table th{color:#f0b4b8}
+.statusline{border-bottom-color:#512027}
+.hybridWelcome{border-color:#68252b}
+.hybridWelcome .welcomeMark{color:#ff858c;background:linear-gradient(145deg,#4c1118,#1b080a);border-color:#87303a;box-shadow:inset 0 0 24px #ff263b18,0 0 24px #ff263b1b}
+.neuralHero{border-color:#67252b;background:radial-gradient(ellipse at 50% 45%,#260c10 0%,#090304 65%,#050203 100%)}
+.neuralEyebrow{color:#ff777f}.neuralStatus{color:#e6b4b7;border-color:#5d252b;background:rgba(18,5,7,.78)}
+.neuralStage{color:#d9b4b7;border-color:#512127;background:rgba(15,5,7,.8)}
+.neuralStage b{color:#ffe5e6}
+
 </style>
 <script>try{if(localStorage.getItem("msi_lock"))document.documentElement.classList.add("locked");}catch(e){}</script>
 </head>
@@ -3412,24 +3431,24 @@ if(Object.keys(DB).length){ document.getElementById('loadStatus').textContent = 
     dpr=Math.min(window.devicePixelRatio||1,1.6);w=window.innerWidth;h=window.innerHeight;
     canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);
     canvas.style.width=w+'px';canvas.style.height=h+'px';ctx.setTransform(dpr,0,0,dpr,0,0);
-    const count=Math.max(32,Math.min(74,Math.round(w*h/14500)));
-    pts=Array.from({length:count},(_,i)=>({x:Math.random()*w,y:Math.random()*h,z:.25+Math.random()*.75,phase:Math.random()*Math.PI*2,speed:.25+Math.random()*.65,r:1+Math.random()*1.6,hue:[192,211,244,176][i%4]}));
+    const count=Math.max(58,Math.min(150,Math.round(w*h/7600)));
+    pts=Array.from({length:count},(_,i)=>({x:Math.random()*w,y:Math.random()*h,z:.25+Math.random()*.75,phase:Math.random()*Math.PI*2,speed:.45+Math.random()*1.05,r:1.15+Math.random()*2.0,hue:[0,3,7,352,355][i%5]}));
     draw(0);
   }
   function draw(t){
-    ctx.fillStyle='#040b17';ctx.fillRect(0,0,w,h);
+    ctx.fillStyle='#070202';ctx.fillRect(0,0,w,h);
     const time=(reduced?0:t*.00022);
     const projected=pts.map((p,i)=>{
-      const x=p.x+Math.sin(time*p.speed*2+p.phase)*14*p.z;
-      const y=p.y+Math.cos(time*p.speed*1.5+p.phase)*13*p.z;
+      const x=p.x+Math.sin(time*p.speed*2+p.phase)*24*p.z;
+      const y=p.y+Math.cos(time*p.speed*1.7+p.phase)*21*p.z;
       return {x,y,z:p.z,r:p.r,hue:p.hue,i};
     });
-    const maxDist=Math.min(145,Math.max(92,w*.24));
+    const maxDist=Math.min(172,Math.max(108,w*.29));
     for(let i=0;i<projected.length;i++){
       const a=projected[i];
       for(let j=i+1;j<projected.length;j++){
         const b=projected[j],dx=a.x-b.x,dy=a.y-b.y,dist=Math.hypot(dx,dy);
-        if(dist<maxDist){const alpha=(1-dist/maxDist)*.23*Math.min(a.z,b.z);
+        if(dist<maxDist){const alpha=(1-dist/maxDist)*.34*Math.min(a.z,b.z);
           const grad=ctx.createLinearGradient(a.x,a.y,b.x,b.y);
           grad.addColorStop(0,`hsla(${a.hue},100%,60%,${alpha})`);grad.addColorStop(1,`hsla(${b.hue},100%,65%,${alpha})`);
           ctx.strokeStyle=grad;ctx.lineWidth=.45+Math.min(a.z,b.z)*.55;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}
@@ -3442,8 +3461,8 @@ if(Object.keys(DB).length){ document.getElementById('loadStatus').textContent = 
       ctx.fillStyle=`hsla(${p.hue},100%,76%,${.72*p.z})`;ctx.beginPath();ctx.arc(p.x,p.y,p.r*p.z,0,Math.PI*2);ctx.fill();
     }
     // Soft central glow gives the network a layered, spatial feel without blocking text.
-    const glow=ctx.createRadialGradient(w*.5,h*.42,0,w*.5,h*.42,Math.max(w,h)*.55);
-    glow.addColorStop(0,'rgba(0,92,190,.08)');glow.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=glow;ctx.fillRect(0,0,w,h);
+    const glow=ctx.createRadialGradient(w*.5,h*.42,0,w*.5,h*.42,Math.max(w,h)*.62);
+    glow.addColorStop(0,'rgba(255,18,38,.11)');glow.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=glow;ctx.fillRect(0,0,w,h);
   }
   function tick(t){if(t-last>32){draw(t);last=t;}raf=requestAnimationFrame(tick);}
   resize();
