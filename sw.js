@@ -1,66 +1,90 @@
 // Marak Stock Intelligence — service worker
-// IMPORTANT: bump CACHE_VERSION every time you redeploy index.html, or installed users will keep seeing the old cached version.
-const CACHE_VERSION = 'msi-v38-intel';
-const CORE_ASSETS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './icon-512-maskable.png'];
+// Bump CACHE_VERSION whenever index.html or this worker changes.
+const CACHE_VERSION = 'msi-v42-integrated-release';
+const CORE_ASSETS = ['./', './index.html'];
+const OPTIONAL_ASSETS = ['./manifest.json', './icon-192.png', './icon-512.png', './icon-512-maskable.png'];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_VERSION).then((cache) => cache.addAll(CORE_ASSETS))
-  );
-  // Don't auto-activate — wait for the page to say it's ready (via the SKIP_WAITING message),
-  // so we can show an "update available" prompt instead of silently swapping under the user.
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_VERSION);
+    // Core assets must be available for installation; optional PWA assets must not
+    // prevent the worker from installing if a repository does not contain them.
+    await cache.addAll(CORE_ASSETS);
+    await Promise.all(OPTIONAL_ASSETS.map(async (asset) => {
+      try { await cache.add(asset); } catch (_) { /* optional asset is absent or unavailable */ }
+    }));
+  })());
+  // Wait for the page's update banner to ask the waiting worker to activate.
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_VERSION && k !== 'msi-cfg').map((k) => caches.delete(k)))
-    ).then(() => self.clients.claim())
-  );
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.filter((key) => key !== CACHE_VERSION && key !== 'msi-cfg').map((key) => caches.delete(key)));
+    await self.clients.claim();
+  })());
 });
 
 self.addEventListener('message', (event) => {
   if (event.data === 'SKIP_WAITING') self.skipWaiting();
 });
 
-// Network-first for the app shell (so you always get the latest when online), cache fallback for offline use.
+// Only cache same-origin app files. Do not cache news/API responses, which can go stale.
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
-  event.respondWith(
-    fetch(event.request)
-      .then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE_VERSION).then((cache) => cache.put(event.request, copy));
-        return res;
-      })
-      .catch(() => caches.match(event.request))
-  );
+  const request = event.request;
+  if (request.method !== 'GET') return;
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
+
+  event.respondWith((async () => {
+    try {
+      const response = await fetch(request);
+      if (response && response.ok) {
+        const copy = response.clone();
+        event.waitUntil(caches.open(CACHE_VERSION).then((cache) => cache.put(request, copy)).catch(() => {}));
+      }
+      return response;
+    } catch (_) {
+      const cached = await caches.match(request);
+      if (cached) return cached;
+      if (request.mode === 'navigate') {
+        return (await caches.match('./index.html')) || Response.error();
+      }
+      return Response.error();
+    }
+  })());
 });
 
-// Push alerts: the Worker sends an empty push; we fetch the message text from it and show a notification.
+// Push alerts: the Worker sends an empty push; fetch the queued message and show it.
 self.addEventListener('push', (event) => {
   event.waitUntil((async () => {
     let msgs = [];
     try {
-      const c = await caches.open('msi-cfg');
-      const r = await c.match('./msi-cfg.json');
-      if (r) {
-        const { url, uid } = await r.json();
-        const res = await fetch(url + '/pending?uid=' + encodeURIComponent(uid));
-        msgs = await res.json();
+      const cache = await caches.open('msi-cfg');
+      const response = await cache.match('./msi-cfg.json');
+      if (response) {
+        const { url, uid } = await response.json();
+        const pending = await fetch(url + '/pending?uid=' + encodeURIComponent(uid));
+        if (pending.ok) msgs = await pending.json();
       }
-    } catch (e) { /* fall through to a generic notification */ }
-    if (!msgs.length) msgs = [{ title: 'Price alert', body: 'A support/resistance line was touched. Open the app.', tag: 'msi-generic' }];
-    await Promise.all(msgs.map((m) => self.registration.showNotification(m.title, {
-      body: m.body, tag: m.tag, renotify: true, requireInteraction: true,
+    } catch (_) { /* show a generic notification below */ }
+    if (!Array.isArray(msgs) || !msgs.length) {
+      msgs = [{ title: 'Price alert', body: 'A support/resistance line was touched. Open the app.', tag: 'msi-generic' }];
+    }
+    await Promise.all(msgs.map((message) => self.registration.showNotification(message.title || 'Price alert', {
+      body: message.body || 'Open Marak Stock Intelligence to review your alert.',
+      tag: message.tag || 'msi-alert', renotify: true, requireInteraction: true,
       icon: './icon-192.png', badge: './icon-192.png', vibrate: [300, 150, 300, 150, 300]
     })));
   })());
 });
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
-    for (const c of list) { if ('focus' in c) return c.focus(); }
+  event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+    for (const client of clients) {
+      if ('focus' in client) return client.focus();
+    }
     return self.clients.openWindow('./');
   }));
 });
