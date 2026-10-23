@@ -633,7 +633,7 @@ document.getElementById('csvFile').addEventListener('change', async (e)=>{
   Object.keys(DB).forEach(sym=>DB[sym].bars.sort((a,b)=>a.date.localeCompare(b.date)));
   const saved=saveDB();
   document.getElementById('loadStatus').textContent=`Imported/updated ${totalRows} valid rows across ${symbolsTouched.size} symbol(s); ${replacedRows} existing date(s) replaced; ${invalidRows} row(s) skipped${missingVolumeRows?`; ${missingVolumeRows} row(s) lacked volume`:''}.${saved?'':' Data may not have been saved.'}`;
-  refreshSymbolSelect(); renderSmartScanner();
+  refreshSymbolSelect(); prepareSmartScanner();
   if(!currentSymbol&&symbolsTouched.size){currentSymbol=[...symbolsTouched][0];const selector=byId('symbolSelect');if(selector)selector.value=currentSymbol;loadSymbol(currentSymbol);}
   else if(currentSymbol&&DB[currentSymbol]) await renderIntelDashboard(currentSymbol,DB[currentSymbol].bars);
   e.target.value='';
@@ -641,7 +641,7 @@ document.getElementById('csvFile').addEventListener('change', async (e)=>{
 
 document.getElementById('clearDataBtn').addEventListener('click', ()=>{
   if(!confirm('Clear all locally stored stock data?')) return;
-  DB = {}; saveDB(); refreshSymbolSelect(); renderSmartScanner();
+  DB = {}; saveDB(); refreshSymbolSelect(); prepareSmartScanner();
   document.getElementById('app').style.display='none';
 });
 
@@ -2696,10 +2696,10 @@ byId('newsBody').addEventListener('keydown',e=>{ if(e.key!=='Enter') return; if(
 // Transparent rule-based financial sentiment. Broader phrase lists reduce false zeros,
 // but this is still a heuristic and does not understand every headline's context.
 const INTEL_POSITIVE_TERMS = [
-  'beat estimates','beats estimates','above estimates','profit rises','profit rose','profit jumps','profit grows','profit growth','profit increases','higher profit','record profit','revenue rises','revenue rose','revenue grows','revenue growth','revenue increases','sales rise','sales growth','earnings rise','earnings growth','strong results','better than expected','outperforms','upgrade','upgraded','buy rating','overweight','price target raised','target price raised','order win','wins order','new order','bags order','contract win','secures contract','dividend','buyback','bonus issue','stock split','margin expansion','approval','approved','positive outlook','capacity expansion','expansion plan','acquires','acquisition','stake sale at premium','debt reduction','debt free','bullish','rally','surge','surges','jumps','gains','gained','rises','rising','shares rise','stock rises','growth','record high','all-time high','strong demand','fund inflow','inflows','promoter buying','deal win','partnership','launches','launch of','raises guidance','guidance raised','profit beats','turnaround','recovery'
+  'beat estimates','beats estimates','above estimates','profit rises','profit rose','profit jumps','profit grows','profit growth','profit increases','higher profit','record profit','revenue rises','revenue rose','revenue grows','revenue growth','revenue increases','sales rise','sales growth','earnings rise','earnings growth','strong results','better than expected','outperforms','upgrade','upgraded','buy rating','overweight','price target raised','target price raised','order win','wins order','new order','bags order','contract win','secures contract','special dividend','dividend increase','dividend raised','buyback','bonus issue','stock split','margin expansion','approval','approved','positive outlook','capacity expansion','expansion plan','acquires','acquisition','stake sale at premium','debt reduction','debt free','bullish','rally','surge','surges','jumps','gains','gained','rises','rising','shares rise','stock rises','growth','record high','all-time high','strong demand','fund inflow','inflows','promoter buying','deal win','partnership','launches','launch of','raises guidance','guidance raised','profit beats','turnaround','recovery'
 ];
 const INTEL_NEGATIVE_TERMS = [
-  'misses estimates','missed estimates','below estimates','profit falls','profit fell','profit drops','profit declines','profit slump','loss widens','widening loss','net loss','revenue falls','revenue fell','revenue declines','revenue drops','sales fall','sales decline','earnings fall','weak results','worse than expected','underperforms','downgrade','downgraded','sell rating','underweight','price target cut','target price cut','fraud','probe','investigation','penalty','fine imposed','default','bankruptcy','resigns','resignation','layoff','layoffs','recall','plant shutdown','regulatory action','guidance cut','debt concern','debt rises','debt increase','bearish','crash','plunges','slumps','falls sharply','insolvency','losses','loss','decline','declines','drops','drop','fell','fall','falls','falling','shares fall','stock falls','cuts guidance','guidance lowered','order cancelled','order canceled','contract terminated','approval rejected','rejected','blocked','ban on','selloff','selling pressure','outflow','outflows','promoter selling','pledge increase','rating cut','margin contraction','weak demand','misses forecast','missed forecast','lawsuit','fraud allegation'
+  'misses estimates','missed estimates','below estimates','profit falls','profit fell','profit drops','profit declines','profit slump','loss widens','widening loss','net loss','revenue falls','revenue fell','revenue declines','revenue drops','sales fall','sales decline','earnings fall','weak results','worse than expected','underperforms','downgrade','downgraded','sell rating','underweight','price target cut','target price cut','fraud','probe','investigation','penalty','fine imposed','payment default','loan default','debt default','bankruptcy','resigns','resignation','layoff','layoffs','recall','plant shutdown','regulatory action','guidance cut','debt concern','debt rises','debt increase','bearish','crash','plunges','slumps','falls sharply','insolvency','losses','loss','decline','declines','drops','drop','fell','fall','falls','falling','shares fall','stock falls','cuts guidance','guidance lowered','order cancelled','order canceled','contract terminated','approval rejected','rejected','blocked','ban on','selloff','selling pressure','outflow','outflows','promoter selling','pledge increase','rating cut','margin contraction','weak demand','misses forecast','missed forecast','lawsuit','fraud allegation'
 ];
 function findSentimentTerms(text, terms){
   const s=String(text||'').toLowerCase().replace(/[’‘]/g,"'").replace(/[^a-z0-9%+.-]+/g,' ').replace(/\s+/g,' ').trim();
@@ -2723,22 +2723,28 @@ function headlineSentiment(items){
   return {score,label,count:rows.length,positive:rows.filter(x=>x.score>0).length,negative:rows.filter(x=>x.score<0).length,positiveMatches:rows.reduce((n,x)=>n+x.positiveTerms.length,0),negativeMatches:rows.reduce((n,x)=>n+x.negativeTerms.length,0),headlines:rows.slice(0,5)};
 }
 function mlFeatureRows(bars,horizon=1){
-  const rows=[];
-  for(let i=25;i<bars.length-horizon;i++){
-    const c=bars[i].close, p5=bars[i-5].close, p20=bars[i-20].close;
-    const ret5=(c/p5)-1, ret20=(c/p20)-1;
-    const window=bars.slice(i-19,i+1), rets=[];
-    for(let j=i-19;j<=i;j++){if(j>0)rets.push(bars[j].close/bars[j-1].close-1);}
-    const mean=rets.reduce((a,b)=>a+b,0)/(rets.length||1), vol=Math.sqrt(rets.reduce((a,b)=>a+(b-mean)**2,0)/(rets.length||1));
-    const avgVol=bars.slice(i-19,i+1).reduce((a,b)=>a+(+b.volume||0),0)/20;
-    const volRatio=avgVol?(+bars[i].volume||0)/avgVol:1;
-    const closes=bars.slice(0,i+1).map(b=>b.close), sma20=closes.slice(-20).reduce((a,b)=>a+b,0)/Math.min(20,closes.length), sma50=closes.slice(-50).reduce((a,b)=>a+b,0)/Math.min(50,closes.length);
-    const feat=[ret5,ret20,vol,Math.max(-3,Math.min(3,volRatio-1)),(sma20/sma50)-1];
-    if(feat.every(Number.isFinite)) rows.push({x:feat,y:bars[i+horizon].close>bars[i].close?1:0,date:bars[i+horizon].date,ret:(bars[i+horizon].close/bars[i].close)-1});
+  // Prefix sums keep feature generation O(n), rather than repeatedly slicing the full history.
+  const rows=[],n=bars.length,closeSum=Array(n+1).fill(0),volSum=Array(n+1).fill(0),retSum=Array(n+1).fill(0),retSqSum=Array(n+1).fill(0),dailyRet=Array(n).fill(0);
+  for(let i=0;i<n;i++){
+    const c=Number(bars[i].close),v=Number(bars[i].volume)||0;
+    closeSum[i+1]=closeSum[i]+c;volSum[i+1]=volSum[i]+v;
+    dailyRet[i]=i>0&&Number(bars[i-1].close)!==0?c/Number(bars[i-1].close)-1:0;
+    retSum[i+1]=retSum[i]+dailyRet[i];retSqSum[i+1]=retSqSum[i]+dailyRet[i]*dailyRet[i];
+  }
+  for(let i=25;i<n-horizon;i++){
+    const c=Number(bars[i].close),p5=Number(bars[i-5].close),p20=Number(bars[i-20].close),from=Math.max(0,i-19),count=i-from+1;
+    const sumR=retSum[i+1]-retSum[from],sumR2=retSqSum[i+1]-retSqSum[from],mean=sumR/count;
+    const vol=Math.sqrt(Math.max(0,sumR2/count-mean*mean));
+    const avgVol=(volSum[i+1]-volSum[from])/count,volRatio=avgVol?(Number(bars[i].volume)||0)/avgVol:1;
+    const sma20=(closeSum[i+1]-closeSum[i+1-Math.min(20,i+1)])/Math.min(20,i+1);
+    const sma50=(closeSum[i+1]-closeSum[i+1-Math.min(50,i+1)])/Math.min(50,i+1);
+    const feat=[(c/p5)-1,(c/p20)-1,vol,Math.max(-3,Math.min(3,volRatio-1)),(sma20/sma50)-1];
+    if(feat.every(Number.isFinite)) rows.push({x:feat,y:Number(bars[i+horizon].close)>c?1:0,date:bars[i+horizon].date,signalDate:bars[i].date,signalIndex:i,targetIndex:i+horizon,ret:(Number(bars[i+horizon].close)/c)-1});
   }
   return rows;
 }
-function trainLogistic(rows, epochs=450, lr=0.08){
+const MSI_ML_EPOCHS=100, MSI_ML_LR=0.06;
+function trainLogistic(rows, epochs=MSI_ML_EPOCHS, lr=MSI_ML_LR){
   if(rows.length<40) return null;
   const n=rows.length, m=rows[0].x.length, means=[], stds=[];
   for(let j=0;j<m;j++){const a=rows.map(r=>r.x[j]),mu=a.reduce((x,y)=>x+y,0)/n,sd=Math.sqrt(a.reduce((x,y)=>x+(y-mu)**2,0)/n)||1;means.push(mu);stds.push(sd);}
@@ -2757,86 +2763,108 @@ function currentMLFeatures(bars){
 function runDirectionModel(bars,horizon=1){
   // Each horizon is trained on historical labels ending before the current candle.
   const rows=mlFeatureRows(bars,horizon);if(rows.length<80)return {ready:false,n:rows.length,horizon};
-  const model=trainLogistic(rows,220,0.06), x=currentMLFeatures(bars);if(!model||!x)return {ready:false,n:rows.length,horizon};
+  const model=trainLogistic(rows,MSI_ML_EPOCHS,MSI_ML_LR), x=currentMLFeatures(bars);if(!model||!x)return {ready:false,n:rows.length,horizon};
   const p=model.predict(x);return {ready:true,n:rows.length,p,horizon};
 }
-function renderSmartScanner(){
+async function renderSmartScanner(){
+  const button=byId('scannerRefresh');if(button){button.disabled=true;button.textContent='Scanning…';}
   const card=byId('smartScannerCard'), el=byId('smartScannerBody');
-  if(!card||!el)return;
+  if(!card||!el){if(button){button.disabled=false;button.textContent='↻ Rescan';}return;}
   const symbols=Object.keys(DB||{}).filter(sym=>DB[sym]&&Array.isArray(DB[sym].bars)&&DB[sym].bars.length>=5&&!/^(NIFTY|NIFTY50|NIFTY 50|NIFTY_50|\^NSEI)$/i.test(sym));
-  if(!symbols.length){card.style.display='none';return;}
+  if(!symbols.length){card.style.display='none';if(button){button.disabled=false;button.textContent='↻ Rescan';}return;}
   card.style.display='block';
-  const rows=symbols.map(sym=>{
-    const bars=DB[sym].bars, last=bars[bars.length-1], prev=bars[bars.length-2];
+  const rows=[];
+  for(let scanIdx=0;scanIdx<symbols.length;scanIdx++){
+    const sym=symbols[scanIdx],bars=DB[sym].bars;
+    let sigHash=2166136261;for(const b of bars){const part=String(b.date)+':'+String(b.close)+':'+String(b.volume)+';';for(let k=0;k<part.length;k++){sigHash^=part.charCodeAt(k);sigHash=Math.imul(sigHash,16777619);}}const sig=bars.length+'|'+(sigHash>>>0);
+    const cached=msiScannerCache.get(sym);if(cached&&cached.sig===sig){rows.push(cached.row);continue;}
+    const last=bars[bars.length-1], prev=bars[bars.length-2];
     const change=prev&&prev.close?(last.close/prev.close-1)*100:null;
     const closes=bars.map(b=>b.close), ema20=closes.slice(-20).reduce((a,b)=>a+b,0)/Math.min(20,closes.length), ema50=closes.slice(-50).reduce((a,b)=>a+b,0)/Math.min(50,closes.length);
     const calc=bars.length>=15?computeAll(bars):null, rsi=calc&&calc.rsi[calc.rsi.length-1];
     const model=runDirectionModel(bars), p=model.ready?model.p:null;
     const trend=ema20>ema50?'Upward':ema20<ema50?'Downward':'Sideways';
     let label='Mixed / wait', cls='';
-    if(p!=null){if(p>=0.60&&trend==='Upward'&&(rsi==null||rsi<75)){label='Bullish setup';cls='up';}else if(p<=0.40&&trend==='Downward'){label='Bearish setup';cls='down';}}
+    if(p!=null){if(p>=0.55&&trend==='Upward'&&(rsi==null||rsi<75)){label='Bullish setup';cls='up';}else if(p<=0.40&&trend==='Downward'){label='Bearish setup';cls='down';}}
     else if(trend==='Upward'&&(rsi==null||rsi<70)){label='Trend positive · more data needed';cls='up';}
     else if(trend==='Downward'){label='Trend negative · more data needed';cls='down';}
-    return {sym,bars:bars.length,last,change,trend,rsi,p,label,cls,sort:p==null?(trend==='Upward'?0.55:trend==='Downward'?0.45:0.5):p};
-  }).sort((a,b)=>b.sort-a.sort);
+    const row={sym,bars:bars.length,last,change,trend,rsi,p,label,cls,sort:p==null?(trend==='Upward'?0.55:trend==='Downward'?0.45:0.5):p};msiScannerCache.set(sym,{sig,row});rows.push(row);
+    if(scanIdx<symbols.length-1)await new Promise(resolve=>setTimeout(resolve,0));
+  }
+  rows.sort((a,b)=>b.sort-a.sort);
   const fmtPct=v=>v==null?'—':(v>=0?'+':'')+v.toFixed(2)+'%';
   el.innerHTML='<div class="muted" style="margin-bottom:8px">'+rows.length+' loaded symbol(s) scanned. Select a row to open its full analysis.</div>'+
     '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:640px"><thead><tr style="text-align:left;border-bottom:1px solid var(--border)"><th style="padding:8px 5px">Stock</th><th style="padding:8px 5px">Last close</th><th style="padding:8px 5px">Day change</th><th style="padding:8px 5px">Trend</th><th style="padding:8px 5px">Up probability</th><th style="padding:8px 5px">Signal</th></tr></thead><tbody>'+rows.map(r=>'<tr data-scan-symbol="'+escH(r.sym)+'" style="border-bottom:1px solid var(--border);cursor:pointer"><td style="padding:9px 5px;font-weight:700">'+escH(r.sym)+'<div class="muted">'+r.bars+' candles</div></td><td style="padding:9px 5px">₹'+Number(r.last.close).toLocaleString('en-IN',{maximumFractionDigits:2})+'</td><td class="'+(r.change>=0?'up':'down')+'" style="padding:9px 5px">'+fmtPct(r.change)+'</td><td style="padding:9px 5px">'+r.trend+(r.rsi==null?'':' · RSI '+r.rsi.toFixed(0))+'</td><td style="padding:9px 5px">'+(r.p==null?'More data needed':(r.p*100).toFixed(0)+'%')+'</td><td class="'+r.cls+'" style="padding:9px 5px">'+r.label+'</td></tr>').join('')+'</tbody></table></div>';
+  if(button){button.disabled=false;button.textContent='↻ Rescan';}
 }
 byId('smartScannerBody')?.addEventListener('click',e=>{const row=e.target.closest('[data-scan-symbol]');if(row){const sym=row.getAttribute('data-scan-symbol');if(DB[sym]){byId('symbolSelect').value=sym;currentSymbol=sym;loadSymbol(sym);window.scrollTo({top:0,behavior:'smooth'});}}});
+const msiScannerCache=new Map();
+function prepareSmartScanner(){
+  const card=byId('smartScannerCard'),el=byId('smartScannerBody');if(!card||!el)return;
+  const n=Object.keys(DB||{}).filter(sym=>DB[sym]&&Array.isArray(DB[sym].bars)&&DB[sym].bars.length>=5&&!/^(NIFTY|NIFTY50|NIFTY 50|NIFTY_50|\^NSEI)$/i.test(sym)).length;
+  card.style.display=n?'block':'none';
+  if(n)el.innerHTML='<div class="muted">'+n+' loaded symbol(s) available. Tap <b>Rescan</b> to run the model scan. It will not run automatically during import, helping lower-end phones stay responsive.</div>';
+}
 byId('scannerRefresh')?.addEventListener('click',renderSmartScanner);
-renderSmartScanner();
+prepareSmartScanner();
 
 const msiBacktestCache=new Map();
-async function runMLWalkForwardBacktest(bars, threshold=0.55, roundTripCost=0.002){
-  let signature=2166136261; for(const b of bars){const v=`${b.date}:${b.open}:${b.high}:${b.low}:${b.close}:${b.volume};`;for(let k=0;k<v.length;k++){signature^=v.charCodeAt(k);signature=Math.imul(signature,16777619);}} const key=[bars.length,signature>>>0,threshold,roundTripCost].join('|');
+async function runMLWalkForwardBacktest(bars,horizon=1,threshold=0.55,roundTripCost=0.002){
+  let signature=2166136261; for(const b of bars){const v=`${b.date}:${b.open}:${b.high}:${b.low}:${b.close}:${b.volume};`;for(let k=0;k<v.length;k++){signature^=v.charCodeAt(k);signature=Math.imul(signature,16777619);}}
+  const key=[bars.length,signature>>>0,horizon,threshold,roundTripCost,MSI_ML_EPOCHS,MSI_ML_LR].join('|');
   if(msiBacktestCache.has(key)) return msiBacktestCache.get(key);
-  const rows=mlFeatureRows(bars);
-  if(rows.length<60)return {ready:false,n:rows.length,reason:'More history is needed; about 85–110 daily candles is a practical starting point.'};
+  const rows=mlFeatureRows(bars,horizon);
+  if(rows.length<60)return {ready:false,n:0,availableRows:rows.length,horizon,reason:'More history is needed for a chronological walk-forward test.'};
   const start=Math.max(40,Math.floor(rows.length*.70)), predictions=[];
-  // Expanding-window evaluation: each fit uses only labels available before the test row.
-  for(let j=start;j<rows.length;j++){
-    const trainRows=rows.slice(0,j), model=trainLogistic(trainRows,100,0.06); if(!model)continue;
-    const p=model.predict(rows[j].x), actual=rows[j].y, trade=p>=threshold;
+  // Evaluate non-overlapping target windows. At each forecast origin, train only on examples whose outcome was already observable by that date.
+  for(let j=start;j<rows.length;j+=horizon){
+    const test=rows[j];
+    const trainRows=rows.slice(0,j).filter(r=>r.targetIndex<=test.signalIndex);
+    if(trainRows.length<40)continue;
+    const model=trainLogistic(trainRows,MSI_ML_EPOCHS,MSI_ML_LR); if(!model)continue;
+    const p=model.predict(test.x), actual=test.y, trade=p>=threshold;
     const positiveRate=trainRows.reduce((a,r)=>a+r.y,0)/trainRows.length;
     const baseline=positiveRate>=0.5?1:0;
-    // This legacy close-to-close return is retained for comparability, but is not an executable fill
-    // because the signal uses closing data. The UI explicitly warns that returns may be unachievable.
-    const closeToCloseRet=rows[j].ret;
-    predictions.push({p,actual,baseline,trade,net:trade?closeToCloseRet-roundTripCost:0,raw:closeToCloseRet,date:rows[j].date});
-    if((j-start)%4===3) await new Promise(resolve=>setTimeout(resolve,0));
+    // Return is close at signal origin to close at horizon end. It remains an illustrative, not directly executable, fill assumption.
+    predictions.push({p,actual,baseline,trade,net:trade?test.ret-roundTripCost:0,raw:test.ret,date:test.date,signalDate:test.signalDate});
+    if(predictions.length%3===0) await new Promise(resolve=>setTimeout(resolve,0));
   }
-  if(!predictions.length)return {ready:false,n:rows.length,reason:'Not enough sequential test observations.'};
+  if(!predictions.length)return {ready:false,n:0,availableRows:rows.length,horizon,reason:'Not enough historical observations with a leakage-safe training window.'};
   const correct=predictions.filter(x=>(x.p>=.5?1:0)===x.actual).length,baseCorrect=predictions.filter(x=>x.baseline===x.actual).length,trades=predictions.filter(x=>x.trade),wins=trades.filter(x=>x.net>0).length;
   const brier=predictions.reduce((a,x)=>a+(x.p-x.actual)**2,0)/predictions.length;
   const logLoss=predictions.reduce((a,x)=>{const q=Math.max(1e-7,Math.min(1-1e-7,x.p));return a-(x.actual?Math.log(q):Math.log(1-q));},0)/predictions.length;
   let equity=1,peak=1,maxDD=0,benchmark=1;
   for(const x of predictions){equity*=1+x.net;benchmark*=1+x.raw;peak=Math.max(peak,equity);maxDD=Math.max(maxDD,(peak-equity)/peak);}
-  const result={ready:true,n:predictions.length,accuracy:correct/predictions.length,baselineAccuracy:baseCorrect/predictions.length,brier,logLoss,upRate:predictions.reduce((a,x)=>a+x.actual,0)/predictions.length,trades:trades.length,winRate:trades.length?wins/trades.length:null,strategyReturn:equity-1,benchmarkReturn:benchmark-1,maxDrawdown:maxDD,threshold,from:predictions[0].date,to:predictions[predictions.length-1].date,cost:roundTripCost,execution:'close-to-close; not directly executable'};
-  msiBacktestCache.set(key,result); if(msiBacktestCache.size>12)msiBacktestCache.delete(msiBacktestCache.keys().next().value);
+  const result={ready:true,n:predictions.length,availableRows:rows.length,horizon,accuracy:correct/predictions.length,baselineAccuracy:baseCorrect/predictions.length,brier,logLoss,upRate:predictions.reduce((a,x)=>a+x.actual,0)/predictions.length,trades:trades.length,winRate:trades.length?wins/trades.length:null,strategyReturn:equity-1,benchmarkReturn:benchmark-1,maxDrawdown:maxDD,threshold,from:predictions[0].signalDate,to:predictions[predictions.length-1].date,cost:roundTripCost,independentSpacing:horizon,minimumSampleForInterpretation:30,execution:'signal close to horizon close; illustrative, not directly executable'};
+  msiBacktestCache.set(key,result); if(msiBacktestCache.size>18)msiBacktestCache.delete(msiBacktestCache.keys().next().value);
   return result;
 }
 async function renderIntelDashboard(sym,bars){
   const el=byId('intelDashboardBody');if(!el)return;
   const last=bars[bars.length-1],prev=bars[bars.length-2],chg=prev?(last.close/prev.close-1)*100:0;
-  const model=runDirectionModel(bars,1),model5=runDirectionModel(bars,5),model20=runDirectionModel(bars,20),calc=computeAll(bars),i=bars.length-1,rsi=calc.rsi[i],atrp=calc.atr[i]!=null?calc.atr[i]/last.close*100:null;
+  const model=runDirectionModel(bars,1),calc=computeAll(bars),i=bars.length-1,rsi=calc.rsi[i],atrp=calc.atr[i]!=null?calc.atr[i]/last.close*100:null;
   const horizonHtml=(m,label)=>`<div class="intelMetric"><div class="k">${label} direction estimate</div><div class="v ${m.ready?(m.p>=.55?'up':m.p<=.45?'down':''):''}">${m.ready?(m.p>=.55?'↑ Higher':m.p<=.45?'↓ Lower':'↔ Unclear'):'More data needed'}</div><div class="d">${m.ready?`Model-estimated probability of a higher close: ${(m.p*100).toFixed(0)}% · trained on ${m.n} historical examples; probability not yet calibrated.`:`Insufficient history (${m.n} examples).`}</div></div>`;
-  const modelHtml=horizonHtml(model,'1-session')+horizonHtml(model5,'5-session')+horizonHtml(model20,'20-session');
+  const modelHtml=horizonHtml(model,'1-session')+`<div class="intelMetric"><div class="k">5-session estimate</div><div class="v">Temporarily unavailable</div><div class="d">Hidden until enough independent walk-forward test observations are available.</div></div><div class="intelMetric"><div class="k">20-session estimate</div><div class="v">Temporarily unavailable</div><div class="d">Hidden until enough independent walk-forward test observations are available.</div></div>`;
   el.innerHTML=`<div class="intelGrid"><div class="intelMetric"><div class="k">Last loaded close</div><div class="v">₹${Number(last.close).toLocaleString('en-IN',{maximumFractionDigits:2})}</div><div class="d">${escH(last.date)} · ${chg>=0?'+':''}${chg.toFixed(2)}% vs prior loaded session</div></div>${modelHtml}<div class="intelMetric"><div class="k">Risk snapshot</div><div class="v">${atrp==null?'—':atrp.toFixed(2)+'% ATR'}</div><div class="d">RSI(14): ${rsi==null?'n/a':rsi.toFixed(1)} · ATR as % of last close is a volatility gauge, not a loss limit.</div></div><div class="intelMetric" style="grid-column:1/-1"><div class="k">Automatic historical model test</div><div id="intelBacktest"><div class="d">Runs automatically using only earlier CSV history; large datasets may take a moment.</div></div></div><div class="intelMetric" style="grid-column:1/-1"><div class="k">Headline sentiment</div><div id="intelSentiment"><div class="v">Loading headlines…</div><div class="d">Searching recent news for ${escH(sym)}.</div></div></div></div>`;
   const btEl=byId('intelBacktest');
   if(btEl){
-    btEl.innerHTML='<div class="d">Running automatic walk-forward test on uploaded CSV history…</div>';
-    const bt=await runMLWalkForwardBacktest(bars);
+    btEl.innerHTML='<div class="d">Running separate 1-, 5-, and 20-session walk-forward tests. Longer horizons use non-overlapping test windows and exclude training labels that would not yet have been known.</div>';
+    const results=await Promise.all([1,5,20].map(h=>runMLWalkForwardBacktest(bars,h,0.55,0.002)));
     if(currentSymbol===sym&&byId('intelBacktest')){
       const pct=v=>(v>=0?'+':'')+(v*100).toFixed(2)+'%';
-      btEl.innerHTML=bt.ready?`<div class="intelGrid"><div><div class="k">Directional accuracy</div><div class="v">${(bt.accuracy*100).toFixed(1)}%</div></div><div><div class="k">Trades</div><div class="v">${bt.trades}</div><div class="d">Entry rule: model up estimate ≥ ${(bt.threshold*100).toFixed(0)}%</div></div><div><div class="k">Win rate</div><div class="v">${bt.winRate==null?'—':(bt.winRate*100).toFixed(1)+'%'}</div></div><div><div class="k">Strategy return</div><div class="v ${bt.strategyReturn>=0?'up':'down'}">${pct(bt.strategyReturn)}</div></div><div><div class="k">Buy-and-hold</div><div class="v ${bt.benchmarkReturn>=0?'up':'down'}">${pct(bt.benchmarkReturn)}</div></div><div><div class="k">Maximum drawdown</div><div class="v down">${(bt.maxDrawdown*100).toFixed(2)}%</div></div><div><div class="k">Brier score</div><div class="v">${bt.brier.toFixed(3)}</div><div class="d">Lower is better; 0 is perfect.</div></div><div><div class="k">Log loss</div><div class="v">${bt.logLoss.toFixed(3)}</div><div class="d">Lower is better.</div></div><div><div class="k">Simple baseline accuracy</div><div class="v">${(bt.baselineAccuracy*100).toFixed(1)}%</div><div class="d">Prior training-set majority class.</div></div></div><div class="d">Out-of-sample window: ${escH(bt.from)} to ${escH(bt.to)} · ${bt.n} test observations · assumed round-trip cost ${(bt.cost*100).toFixed(2)}% per trade · execution assumption: close-to-close after signal close (optimistic / not directly executable).</div><div class="footNote">Historical simulation only, not a forecast or guarantee. The 1-, 5-, and 20-session estimates are experimental model outputs; they are not calibrated probabilities. Brier score and log loss measure probabilistic prediction quality but do not alone establish calibration. The strategy return uses close-to-close returns after a signal based on closing data, which can be optimistic and may not be directly executable. The benchmark uses the same close-to-close return window. The 0.20% round-trip cost is illustrative and excludes taxes, market impact, liquidity constraints, and additional slippage. Results can be unstable on small samples.</div>`:`<div class="d">${escH(bt.reason||'More historical CSV data is needed.')} Feature rows available: ${bt.n||0}.</div>`;
+      const metric=(bt,label)=>{
+        if(!bt.ready)return `<div class="intelMetric"><div class="k">${label} historical test</div><div class="v">Not enough data</div><div class="d">${escH(bt.reason||'More CSV history is needed.')}</div></div>`;
+        const sampleNote=bt.n<30?`<div class="d" style="color:var(--warn,#a66)">Only ${bt.n} non-overlapping test observations; too few for a reliable conclusion (30 is a minimum reporting guard, not proof).</div>`:`<div class="d">${bt.n} non-overlapping test observations; still a historical estimate, not a guarantee.</div>`;
+        return `<div class="intelMetric" style="grid-column:1/-1"><div class="k">${label} walk-forward test</div>${sampleNote}<div class="intelGrid"><div><div class="k">Directional accuracy</div><div class="v">${(bt.accuracy*100).toFixed(1)}%</div></div><div><div class="k">Baseline accuracy</div><div class="v">${(bt.baselineAccuracy*100).toFixed(1)}%</div></div><div><div class="k">Brier score</div><div class="v">${bt.brier.toFixed(3)}</div><div class="d">Lower is better.</div></div><div><div class="k">Log loss</div><div class="v">${bt.logLoss.toFixed(3)}</div><div class="d">Lower is better.</div></div><div><div class="k">Trades ≥ ${(bt.threshold*100).toFixed(0)}%</div><div class="v">${bt.trades}</div></div><div><div class="k">Win rate</div><div class="v">${bt.winRate==null?'—':(bt.winRate*100).toFixed(1)+'%'}</div></div><div><div class="k">Illustrative strategy return</div><div class="v ${bt.strategyReturn>=0?'up':'down'}">${pct(bt.strategyReturn)}</div></div><div><div class="k">Benchmark over sampled windows</div><div class="v ${bt.benchmarkReturn>=0?'up':'down'}">${pct(bt.benchmarkReturn)}</div></div><div><div class="k">Maximum drawdown</div><div class="v down">${(bt.maxDrawdown*100).toFixed(2)}%</div></div></div><div class="d">Signal window: ${escH(bt.from)} to ${escH(bt.to)} · ${bt.n} test observations spaced ${bt.horizon} session(s) apart · assumed round-trip cost ${(bt.cost*100).toFixed(2)}%. Training uses ${MSI_ML_EPOCHS} epochs and learning rate ${MSI_ML_LR}, matching the live model settings.</div></div>`;
+      };
+      btEl.innerHTML=results.map((r,i)=>metric(r,['1-session','5-session','20-session'][i])).join('')+`<div class="footNote">Leakage controls: every forecast is generated using earlier data only; training rows are excluded if their target close would not yet be known at the test forecast date. Test forecast origins are spaced by the forecast horizon, reducing overlap between test outcome windows. Results can still be noisy, especially with small samples. Brier score and log loss do not alone prove probability calibration. Returns assume signal-close to horizon-close fills, which are illustrative and not guaranteed executable; 0.20% round-trip cost excludes taxes, slippage beyond that assumption, market impact and liquidity constraints. Baseline is the prior training-window majority class. Historical performance is not a guarantee of future results.</div>`;
     }
   }
   try{
     const q=getNewsTerm(sym)+' when:14d', items=await fetchNewsItems(q);if(currentSymbol!==sym)return;
     const sent=headlineSentiment(items),sentEl=byId('intelSentiment');if(!sentEl)return;
     const cls=sent.score>=20?'up':sent.score<=-20?'down':'';
-    sentEl.innerHTML=`<div class="row" style="align-items:center;gap:12px"><div class="v ${cls}" style="margin:0">${sent.score>0?'+':''}${sent.score}</div><div><b>${escH(sent.label)}</b><div class="d">${sent.count} headlines scanned · ${sent.positive} positive headlines (${sent.positiveMatches} keyword hits) · ${sent.negative} negative headlines (${sent.negativeMatches} keyword hits)</div></div><span class="intelPill">Keyword-based, not an AI fact-check</span></div>`+(sent.headlines.length?'<div style="margin-top:8px">'+sent.headlines.map(h=>`<div class="statusline" style="align-items:flex-start"><span style="flex:1">${escH(h.title)}<div class="muted">${h.score>0?'Positive match: '+escH((h.positiveTerms||[]).slice(0,3).join(', ')):h.score<0?'Negative match: '+escH((h.negativeTerms||[]).slice(0,3).join(', ')):(h.positiveTerms?.length&&h.negativeTerms?.length?'Mixed signals: '+escH([...h.positiveTerms,...h.negativeTerms].slice(0,3).join(', ')):'No clear keyword match')}</div></span></div>`).join('')+'</div>':'<div class="muted" style="margin-top:6px">No headlines were returned. Try the News & announcements panel.</div>');
+    sentEl.innerHTML=`<div class="row" style="align-items:center;gap:12px"><div class="v ${cls}" style="margin:0">${sent.score>0?'+':''}${sent.score}</div><div><b>${escH(sent.label)}</b><div class="d">${sent.count} headlines scanned · ${sent.positive} positive headlines (${sent.positiveMatches} keyword hits) · ${sent.negative} negative headlines (${sent.negativeMatches} keyword hits)</div></div><span class="intelPill">Heuristic keyword hint · not AI/context-aware</span></div>`+(sent.headlines.length?'<div style="margin-top:8px">'+sent.headlines.map(h=>`<div class="statusline" style="align-items:flex-start"><span style="flex:1">${escH(h.title)}<div class="muted">${h.score>0?'Positive match: '+escH((h.positiveTerms||[]).slice(0,3).join(', ')):h.score<0?'Negative match: '+escH((h.negativeTerms||[]).slice(0,3).join(', ')):(h.positiveTerms?.length&&h.negativeTerms?.length?'Mixed signals: '+escH([...h.positiveTerms,...h.negativeTerms].slice(0,3).join(', ')):'No clear keyword match')}</div></span></div>`).join('')+'</div>':'<div class="muted" style="margin-top:6px">No headlines were returned. Try the News & announcements panel.</div>');
   }catch(e){if(currentSymbol===sym&&byId('intelSentiment'))byId('intelSentiment').innerHTML='<div class="muted">Headline sentiment is temporarily unavailable. The price and model panels above are still available.</div>';}
 }
 byId('intelRefresh')?.addEventListener('click',()=>{if(currentSymbol&&DB[currentSymbol])renderIntelDashboard(currentSymbol,DB[currentSymbol].bars);});
@@ -2968,9 +2996,9 @@ function renderSectorRS(sym,bars,calc,li){
   const tbl=`<table><thead><tr><th>Period</th><th>Stock</th><th>Sector</th><th>NIFTY</th><th>vs Sec</th><th>vs NIFTY</th></tr></thead><tbody>`+
     [1,5,20].map(n=>`<tr><td>${n}d</td><td>${fP(mine[n])}</td><td>${fP(sec[n])}</td><td>${fP(nif[n])}</td><td>${rs(mine[n],sec[n])}</td><td>${rs(mine[n],nif[n])}</td></tr>`).join('')+`</tbody></table>`;
   const ptbl=peers.length?`<table style="margin-top:10px"><thead><tr><th>Peer</th><th>1d</th><th>5d</th><th>20d</th></tr></thead><tbody>`+
-    peers.map(p=>`<tr><td>${p.s}</td><td>${fP(p[1])}</td><td>${fP(p[5])}</td><td>${fP(p[20])}</td></tr>`).join('')+`</tbody></table>`:'';
+    peers.map(p=>`<tr><td>${escH(p.s)}</td><td>${fP(p[1])}</td><td>${fP(p[5])}</td><td>${fP(p[20])}</td></tr>`).join('')+`</tbody></table>`:'';
   document.getElementById('sectorRS').innerHTML=
-    `<div class="row" style="margin-bottom:10px"><select id="sectorPick"><option value="">Sector: not set</option>${sectors.map(s=>`<option ${s===sector?'selected':''}>${s}</option>`).join('')}</select></div>`+
+    `<div class="row" style="margin-bottom:10px"><select id="sectorPick"><option value="">Sector: not set</option>${sectors.map(s=>`<option value="${escH(s)}" ${s===sector?'selected':''}>${escH(s)}</option>`).join('')}</select></div>`+
     `<div style="margin-bottom:8px;font-weight:600">${verdict}</div>`+tbl+ptbl;
   document.getElementById('sectorPick').onchange=e=>{
     let m={}; try{ m=JSON.parse(localStorage.getItem('msi_sectors')||'{}'); }catch(x){}
