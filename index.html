@@ -211,6 +211,15 @@
     <div id="loadStatus" class="footNote"></div>
   </div>
 
+  <section class="card" id="smartScannerCard" style="display:none" aria-live="polite">
+    <div class="statusline" style="border:none;padding:0;align-items:flex-start">
+      <div><h3 style="margin-bottom:4px;color:var(--text)">MARAK SMART STOCK SCANNER</h3><div class="muted">Scans only symbols and historical candles loaded from your CSV files. Other live-data modules are separate and are not used to populate this scanner.</div></div>
+      <button class="secondary" id="scannerRefresh" style="font-size:12px;padding:6px 9px">↻ Rescan</button>
+    </div>
+    <div id="smartScannerBody" style="margin-top:10px"><div class="muted">Upload NSE CSV data to scan your loaded stocks.</div></div>
+    <div class="footNote">Ranking combines the model's estimated next-session direction with simple trend and momentum checks. It is a research shortlist, not a buy/sell instruction. Stocks with insufficient history are marked as needing more data. Historical model testing runs automatically when a loaded stock is analysed.</div>
+  </section>
+
   <div id="app" style="display:none">
 
     <div class="card">
@@ -521,13 +530,22 @@ if (navigator.share) {
 }
 
 /* ============ STATE ============ */
-let DB = JSON.parse(localStorage.getItem('msi_db') || '{}'); // { SYMBOL: { bars:[{date,open,high,low,close,volume,delivPer}], upstox:{} } }
+let DB = {}; try { const saved=JSON.parse(localStorage.getItem('msi_db')||'{}'); if(saved&&typeof saved==='object'&&!Array.isArray(saved)) DB=saved; } catch(err) { console.warn('Saved stock data could not be parsed; starting with an empty in-memory database.',err); }
 let currentSymbol = null;
 let lastSignal = null;
 let lastIchi = null;
 let lastIchiOutcome = null;
 
-function saveDB(){ localStorage.setItem('msi_db', JSON.stringify(DB)); }
+function saveDB(){
+  try { localStorage.setItem('msi_db', JSON.stringify(DB)); return true; }
+  catch (err) {
+    const msg = err && (err.name==='QuotaExceededError' || err.name==='NS_ERROR_DOM_QUOTA_REACHED')
+      ? 'Device storage is full. Export/back up your data or remove older loaded stock history, then try again.'
+      : 'Could not save stock data on this device. Check browser storage permissions and available space.';
+    const status=document.getElementById('loadStatus'); if(status) status.textContent=msg;
+    console.error('MSI storage save failed',err); return false;
+  }
+}
 
 /* ============ CSV INGEST ============ */
 const HEADER_MAP = {
@@ -564,7 +582,7 @@ function parseCSV(text){
     close: findCol(headers, HEADER_MAP.close), volume: findCol(headers, HEADER_MAP.volume),
     symbol: findCol(headers, HEADER_MAP.symbol), deliv: findCol(headers, HEADER_MAP.deliv)
   };
-  if(col.date<0||col.close<0) return [];
+  if(col.date<0||col.open<0||col.high<0||col.low<0||col.close<0) return [];
   const rows = [];
   for(let i=1;i<lines.length;i++){
     const cells = splitCSVLine(lines[i]).map(c=>c.trim());
@@ -574,53 +592,56 @@ function parseCSV(text){
     let d = cells[col.date];
     // normalize date to YYYY-MM-DD
     let dd = normalizeDate(d);
-    rows.push({
-      symbol: sym, date: dd,
-      open: num(cells[col.open]), high: num(cells[col.high]), low: num(cells[col.low]),
-      close: num(cells[col.close]), volume: num(cells[col.volume]) || 0,
-      delivPer: col.deliv>=0 ? num(cells[col.deliv]) : null
-    });
+    const open=num(cells[col.open]), high=num(cells[col.high]), low=num(cells[col.low]), close=num(cells[col.close]);
+    const rawVolume=col.volume>=0?num(cells[col.volume]):null, volume=rawVolume==null?0:rawVolume;
+    if(!dd || close==null || close<=0 || (open!=null&&open<=0) || (high!=null&&high<=0) || (low!=null&&low<=0) || volume<0 || (open!=null&&high!=null&&high<Math.max(open,close)) || (open!=null&&low!=null&&low>Math.min(open,close)) || (high!=null&&low!=null&&high<low)) continue;
+    rows.push({symbol:sym,date:dd,open,high,low,close,volume,delivPer:col.deliv>=0?num(cells[col.deliv]):null,_volumeMissing:col.volume<0||rawVolume==null});
   }
-  return rows.filter(r=>r.date && r.close!=null);
+  return rows;
 }
 function normalizeDate(d){
   if(!d) return null;
   d = d.trim();
   let m;
-  if(m = d.match(/^(\d{4})-(\d{2})-(\d{2})/)) return `${m[1]}-${m[2]}-${m[3]}`;
+  if(m = d.match(/^(\d{4})-(\d{2})-(\d{2})(?:$|T|\s)/)) { const dt=new Date(`${m[1]}-${m[2]}-${m[3]}T00:00:00Z`); return Number.isFinite(dt.getTime())&&dt.toISOString().slice(0,10)===`${m[1]}-${m[2]}-${m[3]}`?`${m[1]}-${m[2]}-${m[3]}`:null; }
   if(m = d.match(/^(\d{2})-([A-Za-z]{3})-(\d{4})/)){ // 01-Jan-2026
-    const months={Jan:'01',Feb:'02',Mar:'03',Apr:'04',May:'05',Jun:'06',Jul:'07',Aug:'08',Sep:'09',Oct:'10',Nov:'11',Dec:'12'};
-    return `${m[3]}-${months[m[2]]}-${m[1]}`;
+    const months={jan:'01',feb:'02',mar:'03',apr:'04',may:'05',jun:'06',jul:'07',aug:'08',sep:'09',oct:'10',nov:'11',dec:'12'};
+    const month=months[m[2].toLowerCase()]; if(!month) return null; const iso=`${m[3]}-${month}-${m[1]}`; return normalizeDate(iso+'T00:00:00Z');
   }
-  if(m = d.match(/^(\d{2})[\/\-](\d{2})[\/\-](\d{4})/)) return `${m[3]}-${m[2]}-${m[1]}`;
+  if(m = d.match(/^(\d{2})[\/\-](\d{2})[\/\-](\d{4})$/)) { const iso=`${m[3]}-${m[2]}-${m[1]}`; return normalizeDate(iso+'T00:00:00Z'); }
   return d;
 }
 
 document.getElementById('csvFile').addEventListener('change', async (e)=>{
   const files = Array.from(e.target.files);
-  let totalRows = 0, symbolsTouched = new Set();
+  let totalRows=0, replacedRows=0, invalidRows=0, missingVolumeRows=0; const symbolsTouched=new Set();
   for(const file of files){
-    const text = await file.text();
-    const rows = parseCSV(text);
+    let text; try{text=await file.text();}catch(err){invalidRows++;continue;}
+    const lines=text.replace(/^\uFEFF/,'').split(/\r?\n/).filter(line=>line.trim());
+    const rows=parseCSV(text); invalidRows+=Math.max(0,lines.length-1-rows.length);
     for(const r of rows){
-      const sym = r.symbol || file.name.replace(/\.csv$/i,'').toUpperCase();
-      if(!DB[sym]) DB[sym] = { bars:[], upstox:{} };
-      // upsert by date
-      const idx = DB[sym].bars.findIndex(b=>b.date===r.date);
-      const bar = {date:r.date, open:r.open, high:r.high, low:r.low, close:r.close, volume:r.volume, delivPer:r.delivPer};
-      if(idx>=0) DB[sym].bars[idx]=bar; else DB[sym].bars.push(bar);
-      symbolsTouched.add(sym); totalRows++;
+      const sym=(r.symbol||file.name.replace(/\.csv$/i,'')).trim().toUpperCase();
+      if(!/^[A-Z0-9._&-]{1,32}$/.test(sym)) {invalidRows++;continue;}
+      if(!DB[sym]) DB[sym]={bars:[],upstox:{}};
+      const idx=DB[sym].bars.findIndex(b=>b.date===r.date);
+      const bar={date:r.date,open:r.open,high:r.high,low:r.low,close:r.close,volume:r.volume,delivPer:r.delivPer};
+      if(idx>=0){DB[sym].bars[idx]=bar;replacedRows++;}else DB[sym].bars.push(bar);
+      if(r._volumeMissing)missingVolumeRows++;
+      symbolsTouched.add(sym);totalRows++;
     }
   }
-  Object.keys(DB).forEach(s=> DB[s].bars.sort((a,b)=>a.date.localeCompare(b.date)) );
-  saveDB();
-  document.getElementById('loadStatus').textContent = `Loaded ${totalRows} rows across ${symbolsTouched.size} symbol(s).`;
-  refreshSymbolSelect();
+  Object.keys(DB).forEach(sym=>DB[sym].bars.sort((a,b)=>a.date.localeCompare(b.date)));
+  const saved=saveDB();
+  document.getElementById('loadStatus').textContent=`Imported/updated ${totalRows} valid rows across ${symbolsTouched.size} symbol(s); ${replacedRows} existing date(s) replaced; ${invalidRows} row(s) skipped${missingVolumeRows?`; ${missingVolumeRows} row(s) lacked volume`:''}.${saved?'':' Data may not have been saved.'}`;
+  refreshSymbolSelect(); renderSmartScanner();
+  if(!currentSymbol&&symbolsTouched.size){currentSymbol=[...symbolsTouched][0];const selector=byId('symbolSelect');if(selector)selector.value=currentSymbol;loadSymbol(currentSymbol);}
+  else if(currentSymbol&&DB[currentSymbol]) await renderIntelDashboard(currentSymbol,DB[currentSymbol].bars);
+  e.target.value='';
 });
 
 document.getElementById('clearDataBtn').addEventListener('click', ()=>{
   if(!confirm('Clear all locally stored stock data?')) return;
-  DB = {}; saveDB(); refreshSymbolSelect();
+  DB = {}; saveDB(); refreshSymbolSelect(); renderSmartScanner();
   document.getElementById('app').style.display='none';
 });
 
@@ -2680,9 +2701,9 @@ function headlineSentiment(items){
   const score=Math.round(raw*100), label=score>=20?'Positive':score<=-20?'Negative':'Mixed / neutral';
   return {score,label,count:rows.length,positive:rows.filter(x=>x.score>0).length,negative:rows.filter(x=>x.score<0).length,headlines:rows.slice(0,3)};
 }
-function mlFeatureRows(bars){
+function mlFeatureRows(bars,horizon=1){
   const rows=[];
-  for(let i=25;i<bars.length-1;i++){
+  for(let i=25;i<bars.length-horizon;i++){
     const c=bars[i].close, p5=bars[i-5].close, p20=bars[i-20].close;
     const ret5=(c/p5)-1, ret20=(c/p20)-1;
     const window=bars.slice(i-19,i+1), rets=[];
@@ -2692,7 +2713,7 @@ function mlFeatureRows(bars){
     const volRatio=avgVol?(+bars[i].volume||0)/avgVol:1;
     const closes=bars.slice(0,i+1).map(b=>b.close), ema20=closes.slice(-20).reduce((a,b)=>a+b,0)/Math.min(20,closes.length), ema50=closes.slice(-50).reduce((a,b)=>a+b,0)/Math.min(50,closes.length);
     const feat=[ret5,ret20,vol,Math.max(-3,Math.min(3,volRatio-1)),(ema20/ema50)-1];
-    if(feat.every(Number.isFinite)) rows.push({x:feat,y:bars[i+1].close>bars[i].close?1:0,date:bars[i+1].date});
+    if(feat.every(Number.isFinite)) rows.push({x:feat,y:bars[i+horizon].close>bars[i].close?1:0,date:bars[i+horizon].date,ret:(bars[i+horizon].close/bars[i].close)-1});
   }
   return rows;
 }
@@ -2712,19 +2733,77 @@ function currentMLFeatures(bars){
   const closes=bars.slice(Math.max(0,i-49),i+1).map(b=>b.close),ema20=bars.slice(Math.max(0,i-19),i+1).reduce((a,b)=>a+b.close,0)/Math.min(20,i+1),ema50=closes.reduce((a,b)=>a+b,0)/closes.length;
   return [(c/p5)-1,(c/p20)-1,vol,Math.max(-3,Math.min(3,volRatio-1)),(ema20/ema50)-1];
 }
-function runDirectionModel(bars){
-  const rows=mlFeatureRows(bars);if(rows.length<80)return {ready:false,n:rows.length};
-  const split=Math.max(40,Math.floor(rows.length*0.8)), train=rows.slice(0,split), test=rows.slice(split);
-  const holdout=trainLogistic(train), accuracy=holdout&&test.length?test.filter(r=>(holdout.predict(r.x)>=0.5?1:0)===r.y).length/test.length:null;
-  const model=trainLogistic(rows), x=currentMLFeatures(bars);if(!model||!x)return {ready:false,n:rows.length};
-  const p=model.predict(x);return {ready:true,n:rows.length,p,accuracy,testN:test.length,vol:Math.sqrt(Math.max(0,x[2]*x[2]))};
+function runDirectionModel(bars,horizon=1){
+  // Each horizon is trained on historical labels ending before the current candle.
+  const rows=mlFeatureRows(bars,horizon);if(rows.length<80)return {ready:false,n:rows.length,horizon};
+  const model=trainLogistic(rows,220,0.06), x=currentMLFeatures(bars);if(!model||!x)return {ready:false,n:rows.length,horizon};
+  const p=model.predict(x);return {ready:true,n:rows.length,p,horizon};
+}
+function renderSmartScanner(){
+  const card=byId('smartScannerCard'), el=byId('smartScannerBody');
+  if(!card||!el)return;
+  const symbols=Object.keys(DB||{}).filter(sym=>DB[sym]&&Array.isArray(DB[sym].bars)&&DB[sym].bars.length>=5&&!/^(NIFTY|NIFTY50|NIFTY 50|NIFTY_50|\^NSEI)$/i.test(sym));
+  if(!symbols.length){card.style.display='none';return;}
+  card.style.display='block';
+  const rows=symbols.map(sym=>{
+    const bars=DB[sym].bars, last=bars[bars.length-1], prev=bars[bars.length-2];
+    const change=prev&&prev.close?(last.close/prev.close-1)*100:null;
+    const closes=bars.map(b=>b.close), ema20=closes.slice(-20).reduce((a,b)=>a+b,0)/Math.min(20,closes.length), ema50=closes.slice(-50).reduce((a,b)=>a+b,0)/Math.min(50,closes.length);
+    const calc=bars.length>=15?computeAll(bars):null, rsi=calc&&calc.rsi[calc.rsi.length-1];
+    const model=runDirectionModel(bars), p=model.ready?model.p:null;
+    const trend=ema20>ema50?'Upward':ema20<ema50?'Downward':'Sideways';
+    let label='Mixed / wait', cls='';
+    if(p!=null){if(p>=0.60&&trend==='Upward'&&(rsi==null||rsi<75)){label='Bullish setup';cls='up';}else if(p<=0.40&&trend==='Downward'){label='Bearish setup';cls='down';}}
+    else if(trend==='Upward'&&(rsi==null||rsi<70)){label='Trend positive · more data needed';cls='up';}
+    else if(trend==='Downward'){label='Trend negative · more data needed';cls='down';}
+    return {sym,bars:bars.length,last,change,trend,rsi,p,label,cls,sort:p==null?(trend==='Upward'?0.55:trend==='Downward'?0.45:0.5):p};
+  }).sort((a,b)=>b.sort-a.sort);
+  const fmtPct=v=>v==null?'—':(v>=0?'+':'')+v.toFixed(2)+'%';
+  el.innerHTML='<div class="muted" style="margin-bottom:8px">'+rows.length+' loaded symbol(s) scanned. Select a row to open its full analysis.</div>'+
+    '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:640px"><thead><tr style="text-align:left;border-bottom:1px solid var(--border)"><th style="padding:8px 5px">Stock</th><th style="padding:8px 5px">Last close</th><th style="padding:8px 5px">Day change</th><th style="padding:8px 5px">Trend</th><th style="padding:8px 5px">Up probability</th><th style="padding:8px 5px">Signal</th></tr></thead><tbody>'+rows.map(r=>'<tr data-scan-symbol="'+escH(r.sym)+'" style="border-bottom:1px solid var(--border);cursor:pointer"><td style="padding:9px 5px;font-weight:700">'+escH(r.sym)+'<div class="muted">'+r.bars+' candles</div></td><td style="padding:9px 5px">₹'+Number(r.last.close).toLocaleString('en-IN',{maximumFractionDigits:2})+'</td><td class="'+(r.change>=0?'up':'down')+'" style="padding:9px 5px">'+fmtPct(r.change)+'</td><td style="padding:9px 5px">'+r.trend+(r.rsi==null?'':' · RSI '+r.rsi.toFixed(0))+'</td><td style="padding:9px 5px">'+(r.p==null?'More data needed':(r.p*100).toFixed(0)+'%')+'</td><td class="'+r.cls+'" style="padding:9px 5px">'+r.label+'</td></tr>').join('')+'</tbody></table></div>';
+}
+byId('smartScannerBody')?.addEventListener('click',e=>{const row=e.target.closest('[data-scan-symbol]');if(row){const sym=row.getAttribute('data-scan-symbol');if(DB[sym]){byId('symbolSelect').value=sym;currentSymbol=sym;loadSymbol(sym);window.scrollTo({top:0,behavior:'smooth'});}}});
+byId('scannerRefresh')?.addEventListener('click',renderSmartScanner);
+renderSmartScanner();
+
+const msiBacktestCache=new Map();
+async function runMLWalkForwardBacktest(bars, threshold=0.55, roundTripCost=0.002){
+  let signature=2166136261; for(const b of bars){const v=`${b.date}:${b.open}:${b.high}:${b.low}:${b.close}:${b.volume};`;for(let k=0;k<v.length;k++){signature^=v.charCodeAt(k);signature=Math.imul(signature,16777619);}} const key=[bars.length,signature>>>0,threshold,roundTripCost].join('|');
+  if(msiBacktestCache.has(key)) return msiBacktestCache.get(key);
+  const rows=mlFeatureRows(bars);
+  if(rows.length<60)return {ready:false,n:rows.length,reason:'More history is needed; about 85–110 daily candles is a practical starting point.'};
+  const start=Math.max(40,Math.floor(rows.length*.70)), predictions=[];
+  // Expanding-window evaluation: each fit uses only labels available before the test row.
+  for(let j=start;j<rows.length;j++){
+    const model=trainLogistic(rows.slice(0,j),100,0.06); if(!model)continue;
+    const p=model.predict(rows[j].x), actual=rows[j].y, trade=p>=threshold;
+    predictions.push({p,actual,trade,net:trade?rows[j].ret-roundTripCost:0,raw:rows[j].ret,date:rows[j].date});
+    if((j-start)%4===3) await new Promise(resolve=>setTimeout(resolve,0));
+  }
+  if(!predictions.length)return {ready:false,n:rows.length,reason:'Not enough sequential test observations.'};
+  const correct=predictions.filter(x=>(x.p>=.5?1:0)===x.actual).length,trades=predictions.filter(x=>x.trade),wins=trades.filter(x=>x.net>0).length;
+  let equity=1,peak=1,maxDD=0,benchmark=1;
+  for(const x of predictions){equity*=1+x.net;benchmark*=1+x.raw;peak=Math.max(peak,equity);maxDD=Math.max(maxDD,(peak-equity)/peak);}
+  const result={ready:true,n:predictions.length,accuracy:correct/predictions.length,trades:trades.length,winRate:trades.length?wins/trades.length:null,strategyReturn:equity-1,benchmarkReturn:benchmark-1,maxDrawdown:maxDD,threshold,from:predictions[0].date,to:predictions[predictions.length-1].date,cost:roundTripCost};
+  msiBacktestCache.set(key,result); if(msiBacktestCache.size>12)msiBacktestCache.delete(msiBacktestCache.keys().next().value);
+  return result;
 }
 async function renderIntelDashboard(sym,bars){
   const el=byId('intelDashboardBody');if(!el)return;
   const last=bars[bars.length-1],prev=bars[bars.length-2],chg=prev?(last.close/prev.close-1)*100:0;
-  const model=runDirectionModel(bars),calc=computeAll(bars),i=bars.length-1,rsi=calc.rsi[i],atrp=calc.atr[i]!=null?calc.atr[i]/last.close*100:null;
-  const modelHtml=model.ready?`<div class="v ${model.p>=.55?'up':model.p<=.45?'down':''}">${model.p>=.55?'↑ Higher':model.p<=.45?'↓ Lower':'↔ Unclear'}</div><div class="d">Next-session direction estimate: ${(model.p*100).toFixed(0)}% up probability. Holdout directional accuracy: ${model.accuracy==null?'n/a':(model.accuracy*100).toFixed(0)+'%'} on ${model.testN} later observations.</div>`:`<div class="v">More data needed</div><div class="d">Load at least about 110 daily candles to train and evaluate the classifier; available bars: ${bars.length}.</div>`;
-  el.innerHTML=`<div class="intelGrid"><div class="intelMetric"><div class="k">Last loaded close</div><div class="v">₹${Number(last.close).toLocaleString('en-IN',{maximumFractionDigits:2})}</div><div class="d">${escH(last.date)} · ${chg>=0?'+':''}${chg.toFixed(2)}% vs prior loaded session</div></div><div class="intelMetric"><div class="k">ML direction estimate</div>${modelHtml}</div><div class="intelMetric"><div class="k">Risk snapshot</div><div class="v">${atrp==null?'—':atrp.toFixed(2)+'% ATR'}</div><div class="d">RSI(14): ${rsi==null?'n/a':rsi.toFixed(1)} · ATR as % of last close is a volatility gauge, not a loss limit.</div></div><div class="intelMetric" style="grid-column:1/-1"><div class="k">Headline sentiment</div><div id="intelSentiment"><div class="v">Loading headlines…</div><div class="d">Searching recent news for ${escH(sym)}.</div></div></div></div>`;
+  const model=runDirectionModel(bars,1),model5=runDirectionModel(bars,5),model20=runDirectionModel(bars,20),calc=computeAll(bars),i=bars.length-1,rsi=calc.rsi[i],atrp=calc.atr[i]!=null?calc.atr[i]/last.close*100:null;
+  const horizonHtml=(m,label)=>`<div class="intelMetric"><div class="k">${label} direction estimate</div><div class="v ${m.ready?(m.p>=.55?'up':m.p<=.45?'down':''):''}">${m.ready?(m.p>=.55?'↑ Higher':m.p<=.45?'↓ Lower':'↔ Unclear'):'More data needed'}</div><div class="d">${m.ready?`Model-estimated probability of a higher close: ${(m.p*100).toFixed(0)}% · ${m.n} historical examples.`:`Insufficient history (${m.n} examples).`}</div></div>`;
+  const modelHtml=horizonHtml(model,'1-session')+horizonHtml(model5,'5-session')+horizonHtml(model20,'20-session');
+  el.innerHTML=`<div class="intelGrid"><div class="intelMetric"><div class="k">Last loaded close</div><div class="v">₹${Number(last.close).toLocaleString('en-IN',{maximumFractionDigits:2})}</div><div class="d">${escH(last.date)} · ${chg>=0?'+':''}${chg.toFixed(2)}% vs prior loaded session</div></div>${modelHtml}<div class="intelMetric"><div class="k">Risk snapshot</div><div class="v">${atrp==null?'—':atrp.toFixed(2)+'% ATR'}</div><div class="d">RSI(14): ${rsi==null?'n/a':rsi.toFixed(1)} · ATR as % of last close is a volatility gauge, not a loss limit.</div></div><div class="intelMetric" style="grid-column:1/-1"><div class="k">Automatic historical model test</div><div id="intelBacktest"><div class="d">Runs automatically using only earlier CSV history; large datasets may take a moment.</div></div></div><div class="intelMetric" style="grid-column:1/-1"><div class="k">Headline sentiment</div><div id="intelSentiment"><div class="v">Loading headlines…</div><div class="d">Searching recent news for ${escH(sym)}.</div></div></div></div>`;
+  const btEl=byId('intelBacktest');
+  if(btEl){
+    btEl.innerHTML='<div class="d">Running automatic walk-forward test on uploaded CSV history…</div>';
+    const bt=await runMLWalkForwardBacktest(bars);
+    if(currentSymbol===sym&&byId('intelBacktest')){
+      const pct=v=>(v>=0?'+':'')+(v*100).toFixed(2)+'%';
+      btEl.innerHTML=bt.ready?`<div class="intelGrid"><div><div class="k">Directional accuracy</div><div class="v">${(bt.accuracy*100).toFixed(1)}%</div></div><div><div class="k">Trades</div><div class="v">${bt.trades}</div><div class="d">Entry rule: model up estimate ≥ ${(bt.threshold*100).toFixed(0)}%</div></div><div><div class="k">Win rate</div><div class="v">${bt.winRate==null?'—':(bt.winRate*100).toFixed(1)+'%'}</div></div><div><div class="k">Strategy return</div><div class="v ${bt.strategyReturn>=0?'up':'down'}">${pct(bt.strategyReturn)}</div></div><div><div class="k">Buy-and-hold</div><div class="v ${bt.benchmarkReturn>=0?'up':'down'}">${pct(bt.benchmarkReturn)}</div></div><div><div class="k">Maximum drawdown</div><div class="v down">${(bt.maxDrawdown*100).toFixed(2)}%</div></div></div><div class="d">Out-of-sample window: ${escH(bt.from)} to ${escH(bt.to)} · ${bt.n} test observations · assumed round-trip cost ${(bt.cost*100).toFixed(2)}% per trade.</div><div class="footNote">Historical simulation only, not a forecast or guarantee. The displayed 1-, 5-, and 20-session estimates are separate model outputs, not calibrated probabilities. The backtest currently evaluates the next-session baseline and assumes close-to-close returns, which may not be achievable after a signal is known. The cost assumption is illustrative and excludes any additional taxes, market impact, liquidity limits, and execution slippage. Results can be unstable on small samples.</div>`:`<div class="d">${escH(bt.reason||'More historical CSV data is needed.')} Feature rows available: ${bt.n||0}.</div>`;
+    }
+  }
   try{
     const q=getNewsTerm(sym)+' when:14d', items=await fetchNewsItems(q);if(currentSymbol!==sym)return;
     const sent=headlineSentiment(items),sentEl=byId('intelSentiment');if(!sentEl)return;
