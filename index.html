@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#000000">
 <meta name="color-scheme" content="dark">
-<title>Marak Stock Intelligence</title>
+<title>Marak Stock Intelligence — Integrated Release</title>
 <link rel="manifest" href="manifest.json">
 <style>
   :root{
@@ -77,31 +77,19 @@
   canvas{width:100%;height:220px;background:var(--card2);border-radius:8px}
 
   /* 3D-style ML network visualization */
-  .neuralHero{position:relative;overflow:hidden;border:1px solid #64202a;border-radius:14px;background:radial-gradient(ellipse at 50% 45%,#2a0c12 0%,#100609 62%,#050203 100%);margin:12px 0 14px;isolation:isolate}
+  .neuralHero{position:relative;overflow:hidden;border:1px solid #1f3448;border-radius:14px;background:radial-gradient(ellipse at 50% 45%,#102236 0%,#070b12 62%,#050609 100%);margin:12px 0 14px;isolation:isolate}
   .neuralHero:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,rgba(4,10,18,.1),transparent 48%,rgba(0,0,0,.22));z-index:1}
   .neuralHead{position:absolute;left:14px;right:14px;top:12px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;z-index:2;pointer-events:none}
   .neuralEyebrow{font-size:10px;letter-spacing:.16em;color:#76caff;font-weight:800}
   .neuralTitle{font-size:16px;font-weight:750;margin-top:4px;color:#eff8ff}
   .neuralStatus{font-size:10px;color:#8da7bd;border:1px solid #29445c;border-radius:999px;padding:5px 8px;background:rgba(4,13,24,.72);white-space:nowrap}
-  #neuralCanvas{display:block;width:100%;height:360px;background:transparent;touch-action:none;cursor:grab;position:relative;z-index:0}
+  #neuralCanvas{display:block;width:100%;height:290px;background:transparent;touch-action:pan-y}
   .neuralFoot{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between;padding:0 12px 12px;position:relative;z-index:2}
-  .neuralLivePanel{position:relative;z-index:2;margin:0 12px 12px;padding:10px;border:1px solid rgba(255,70,93,.25);border-radius:10px;background:rgba(8,2,5,.84)}
-  .neuralLiveTop{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
-  .neuralLiveLabel{font-size:10px;letter-spacing:.12em;color:#ff9aa5;font-weight:800}
-  .neuralLiveSymbol{font-size:11px;color:#f3d9dd;font-weight:700}
-  .neuralLiveGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
-  .neuralLiveMetric{min-width:0;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.025);border-radius:7px;padding:7px}
-  .neuralLiveMetric .k{font-size:9px;color:#a99a9e;letter-spacing:.04em}
-  .neuralLiveMetric .v{font-size:12px;font-weight:750;color:#f8eef0;margin-top:3px;overflow-wrap:anywhere}
-  .neuralLiveMetric .d{font-size:9px;color:#a99a9e;margin-top:3px;line-height:1.35}
-  .neuralLiveNote{font-size:10px;line-height:1.45;color:#a99a9e;margin-top:8px}
-  @media(max-width:480px){.neuralLiveGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.neuralLiveMetric .v{font-size:11px}}
-
   .neuralStages{display:flex;flex-wrap:wrap;gap:7px}
   .neuralStage{font-size:10px;color:#9db1c4;border:1px solid #26394a;border-radius:6px;padding:5px 7px;background:rgba(7,13,22,.75)}
   .neuralStage b{color:#e3f4ff;font-weight:650}
   #neuralPause{font-size:11px;padding:6px 9px;min-height:32px}
-  @media(max-width:640px){#neuralCanvas{height:310px}.neuralTitle{font-size:14px}.neuralStatus{font-size:9px}.neuralHead{left:10px;right:10px;top:10px}.neuralFoot{padding:0 9px 10px}}
+  @media(max-width:640px){#neuralCanvas{height:250px}.neuralTitle{font-size:14px}.neuralStatus{font-size:9px}.neuralHead{left:10px;right:10px;top:10px}.neuralFoot{padding:0 9px 10px}}
   @media(prefers-reduced-motion:reduce){.neuralHero *{scroll-behavior:auto}}
 
   .settingsGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -123,115 +111,24 @@
   .intelPill{display:inline-block;border:1px solid var(--border);border-radius:999px;padding:3px 8px;font-size:11px;color:var(--sub)}
   @media(max-width:640px){.intelGrid{grid-template-columns:1fr}.intelMetric .v{font-size:18px}}
 
-/* ===== MARAK HYBRID MOBILE REDESIGN (C) ===== */
-:root{
-  --navy:#100707;--navy2:#190909;--bg:#070303;--card:#140909;--card2:#1c0b0b;
-  --border:#592020;--text:#fff1f1;--sub:#c9a7a7;--blue:#d92735;--blue2:#ff4854;
-  --green:#00d6a0;--orange:#f6ad55;--red:#ff3347;--amber:#ffc857;
-}
-html,body{background:radial-gradient(ellipse at 50% -15%,#260909 0%,#100505 48%,#040202 100%);min-height:100%;}
-body{font-family:Inter,Roboto,"Segoe UI",system-ui,sans-serif;line-height:1.45;letter-spacing:.005em}
-header{padding:13px 16px;background:rgba(18,5,6,.92);backdrop-filter:blur(16px);border-bottom:1px solid #592020;box-shadow:0 8px 28px #0008}
-.logo{border-radius:12px;background:linear-gradient(145deg,#ff3347,#8f101b);box-shadow:0 0 24px #ff263b45;color:white}
-.brand{font-size:16px;letter-spacing:-.025em}.brand small{color:#83a8d2;font-size:10px;margin-top:2px}
-#indexTicker{background:#09192a!important;border-bottom-color:#1a3550!important;color:#d9eaff;gap:18px!important}
-main{max-width:1180px;padding:18px 16px 34px}
-.card{background:linear-gradient(145deg,rgba(25,10,11,.88),rgba(9,4,5,.91));border:1px solid #572024;border-radius:17px;padding:16px;box-shadow:0 10px 28px #0005,inset 0 1px #ffffff05;margin-bottom:14px}
-.card h3{color:#9fc6f2;letter-spacing:.07em;font-size:12px}
-input,select,textarea{background:#07172a;border-color:#294866;border-radius:10px;min-height:40px}
-button{border-radius:10px;background:linear-gradient(135deg,#ff394b,#a80f20);box-shadow:0 5px 16px #ff1f3628;min-height:38px}
-button.secondary{background:#102740;border:1px solid #294866;box-shadow:none}
-button.ghost{background:rgba(8,24,41,.7);border:1px solid #294866;box-shadow:none}
-.tabbar{gap:8px;padding:5px 2px 10px;margin:12px 0 14px;scrollbar-width:none}
-.tabbar::-webkit-scrollbar{display:none}
-.tabbtn{background:#0b1e32;border:1px solid #1d3c59;border-radius:999px;padding:10px 14px;color:#a8bfd9;min-height:40px}
-.tabbtn.active{background:linear-gradient(135deg,#f33b4d,#8f101b);border-color:#ff5b67;box-shadow:0 5px 18px #ff263b40;color:#fff}
-.tabpane.active{animation:hybridPaneIn .24s ease-out}
-@keyframes hybridPaneIn{from{opacity:.55;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
-.intelMetric{background:linear-gradient(145deg,#102844,#09192a);border-color:#214462;border-radius:14px}
-.intelMetric .k{color:#8db6df}.intelMetric .v{letter-spacing:-.035em}
-.tag{border:1px solid #ffffff0c}
-#neuralCanvas{width:100%;height:clamp(280px,48vw,430px);display:block;border-radius:15px}
-#tab-mlpred .card,#tab-backtest .card,#tab-sentiment .card{border-radius:16px}
-#tab-mlpred .card{background:linear-gradient(145deg,#0a1b30,#061323);border-color:#20466b}
-#tab-mlpred canvas{max-width:100%}
-#chat{background:#061426;border:1px solid #1d3a57;border-radius:12px;padding:10px}
-.footNote{color:#8da7c2;font-size:11.5px;line-height:1.55}
-table th{color:#9dbce0}table td,table th{border-bottom-color:#1b3854}
-.statusline{border-bottom-color:#1d3a57}
-#lockScreen{background:radial-gradient(ellipse at top,#102e52,#050c16 68%)}
-#lockScreen .logo{box-shadow:0 0 35px #167bff55}
-/* A welcoming, real UI intro; no fabricated market prices or performance claims. */
-.hybridWelcome{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:18px;margin:16px auto 0;max-width:1148px;padding:22px 22px;border:1px solid #21476b;border-radius:19px;background:radial-gradient(ellipse at 90% 0%,#164c7a80,transparent 44%),linear-gradient(115deg,#0d2540,#091728 72%);box-shadow:0 14px 35px #0003}
-.hybridWelcome:after{content:"";position:absolute;right:-45px;top:-85px;width:220px;height:220px;border:1px solid #3a9aff28;border-radius:50%;box-shadow:0 0 0 24px #3a9aff09,0 0 0 48px #3a9aff06;pointer-events:none}
-.hybridWelcome .eyebrow{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#62c6ff;font-weight:800;margin-bottom:6px}
-.hybridWelcome h1{font-size:clamp(22px,4vw,31px);line-height:1.15;letter-spacing:-.04em;margin:0 0 8px;color:#f2f7ff}
-.hybridWelcome p{font-size:13px;color:#a9c1dc;margin:0;max-width:520px}
-.hybridWelcome .welcomeMark{position:relative;z-index:1;flex:0 0 72px;width:72px;height:72px;border-radius:22px;display:grid;place-items:center;font-size:34px;color:#7de5ff;background:linear-gradient(145deg,#0e3b64,#10233e);border:1px solid #2d6b9b;box-shadow:inset 0 0 24px #0c94ff18,0 0 24px #168bff1b}
-@media(min-width:900px){.hybridWelcome{margin-top:20px}main{padding-top:18px}.card{padding:19px}}
-@media(max-width:640px){
-  header{padding:11px 12px;gap:9px}.logo{width:36px;height:36px}.brand{font-size:14px}.brand small{font-size:9px}
-  header>div:last-child{gap:5px!important}header button{min-height:35px}
-  #indexTicker{padding:9px 12px!important;font-size:12px!important}
-  main{padding:12px 10px 26px}
-  .hybridWelcome{margin:12px 10px 0;padding:18px 16px;border-radius:16px;gap:10px}
-  .hybridWelcome h1{font-size:23px}.hybridWelcome p{font-size:12px}.hybridWelcome .welcomeMark{width:54px;height:54px;flex-basis:54px;border-radius:16px;font-size:26px}
-  .card{padding:13px;border-radius:14px;margin-bottom:11px}
-  .tabbar{margin:10px 0 12px;position:sticky;top:62px;z-index:8;background:rgba(5,13,24,.94);backdrop-filter:blur(12px);padding:8px 2px;border-bottom:1px solid #18324b}
-  .tabbtn{font-size:12px;padding:9px 12px;min-height:38px}
-  .grid2{grid-template-columns:1fr}.grid3{grid-template-columns:1fr 1fr}
-  .intelGrid{grid-template-columns:1fr 1fr;gap:8px}.intelMetric{padding:10px}.intelMetric .v{font-size:17px}
-  .price{font-size:23px}
-  #neuralCanvas{height:310px}
-  input,select,textarea{max-width:100%;min-width:0}
-  .row{gap:8px}
-  table{font-size:11.5px}th,td{padding:7px 5px}
-}
-@media(prefers-reduced-motion:reduce){.tabpane.active{animation:none}}
-
-
-/* ===== LIVE FULL-APP 3D NEURAL BACKGROUND ===== */
-html,body{background:#070202!important}
-body{position:relative;isolation:isolate;background:transparent!important}
-#neuralBg{position:fixed;inset:0;width:100%;height:100%;z-index:-1;display:block;pointer-events:none;background:#070202;opacity:.9}
-body>header,body>main,body>.hybridWelcome,body>#indexTicker,body>footer{position:relative;z-index:1}
-header{background:rgba(18,5,6,.78)!important;backdrop-filter:blur(10px)}
-.card{background:linear-gradient(145deg,rgba(25,10,11,.82),rgba(9,4,5,.87))!important;backdrop-filter:blur(5px)}
-.hybridWelcome{background:radial-gradient(ellipse at 90% 0%,rgba(150,15,28,.32),transparent 44%),linear-gradient(115deg,rgba(34,10,12,.86),rgba(12,5,6,.89))!important;backdrop-filter:blur(6px)}
-#indexTicker{background:rgba(9,25,42,.86)!important;backdrop-filter:blur(8px)}
-.tabbar{background:rgba(5,13,24,.82)!important;backdrop-filter:blur(10px)}
-#lockScreen,#settingsModal{z-index:5000}
-@media(prefers-reduced-motion:reduce){#neuralBg{opacity:.35}}
-
-/* ===== CRIMSON 3D NEURAL EXPERIENCE ===== */
-.neuralHero{border:1px solid rgba(255,54,78,.48);box-shadow:inset 0 0 42px rgba(115,0,18,.13),0 0 26px rgba(255,22,49,.08);background:radial-gradient(ellipse at 50% 48%,#22050b 0%,#0b0305 54%,#040203 100%)}
-#neuralCanvas{touch-action:none;cursor:grab;min-height:310px}
-#neuralCanvas:active{cursor:grabbing}
-.neuralTitle{color:#fff1f2;text-shadow:0 0 18px rgba(255,52,77,.22)}
-.neuralStatus{border-color:#762531;color:#ffb0b8}
-/* ===== CRIMSON RED PREMIUM SKIN ===== */
-:root{color-scheme:dark}
-body{color:#fff0f0}
-.card h3,.hybridWelcome .eyebrow{color:#ff858c}
-input,select,textarea{background:#100708;border-color:#592329;color:#fff0f0}
-.tabbtn{background:#16090a;border-color:#4b1b20;color:#d7b5b7}
-.intelMetric{background:linear-gradient(145deg,#210d0f,#100607);border-color:#542026}
-.intelMetric .k{color:#d6a5a8}
-#chat{background:#100708;border-color:#542026}
-table th{color:#f0b4b8}
-.statusline{border-bottom-color:#512027}
-.hybridWelcome{border-color:#68252b}
-.hybridWelcome .welcomeMark{color:#ff858c;background:linear-gradient(145deg,#4c1118,#1b080a);border-color:#87303a;box-shadow:inset 0 0 24px #ff263b18,0 0 24px #ff263b1b}
-.neuralHero{border-color:#67252b;background:radial-gradient(ellipse at 50% 45%,#260c10 0%,#090304 65%,#050203 100%)}
-.neuralEyebrow{color:#ff777f}.neuralStatus{color:#e6b4b7;border-color:#5d252b;background:rgba(18,5,7,.78)}
-.neuralStage{color:#d9b4b7;border-color:#512127;background:rgba(15,5,7,.8)}
-.neuralStage b{color:#ffe5e6}
+/* Marak 3D radial watchlist selector */
+#radialWatchLauncher{position:fixed;right:18px;bottom:22px;z-index:4200;width:66px;height:66px;border-radius:50%;border:1px solid rgba(255,255,255,.32);color:#fff;font-weight:800;font-size:21px;letter-spacing:.02em;background:radial-gradient(circle at 30% 22%,#ff9a9a 0,#d92839 28%,#75101e 72%,#350710 100%);box-shadow:0 9px 0 #390711,0 15px 28px rgba(0,0,0,.5),inset 0 2px 5px rgba(255,255,255,.4);touch-action:none;user-select:none;-webkit-user-select:none}
+#radialWatchLauncher:active{transform:translateY(3px);box-shadow:0 6px 0 #390711,0 10px 20px rgba(0,0,0,.45),inset 0 2px 5px rgba(255,255,255,.4)}
+#radialWatchOverlay{position:fixed;inset:0;z-index:4199;display:none;align-items:center;justify-content:center;background:radial-gradient(circle,rgba(14,18,29,.18),rgba(4,6,12,.76));backdrop-filter:blur(7px);touch-action:none}
+#radialWatchOverlay.open{display:flex}
+#radialWatchStage{position:relative;width:min(88vw,390px);height:min(88vw,390px);max-height:70vh;max-width:70vh;min-width:280px;min-height:280px}
+#radialWatchSvg{width:100%;height:100%;overflow:visible;filter:drop-shadow(0 14px 22px rgba(0,0,0,.45))}
+#radialWatchSvg .sector{fill:rgba(33,42,60,.92);stroke:rgba(255,255,255,.36);stroke-width:1.4;transition:fill .12s,stroke .12s}
+#radialWatchSvg .sector.selected{fill:rgba(210,32,53,.94);stroke:#fff;stroke-width:2.6;filter:drop-shadow(0 0 7px rgba(255,70,90,.9))}
+#radialWatchSvg .sector-label{fill:#fff;font-size:10px;font-weight:750;text-anchor:middle;dominant-baseline:middle;pointer-events:none}
+#radialWatchSvg .center-disc{fill:url(#radialGloss);stroke:rgba(255,255,255,.6);stroke-width:1.4}
+#radialWatchHint{position:absolute;left:50%;bottom:-28px;transform:translateX(-50%);white-space:nowrap;font-size:12px;color:#fff;text-shadow:0 2px 5px #000}
+@media(max-width:480px){#radialWatchLauncher{right:14px;bottom:16px;width:60px;height:60px}#radialWatchStage{width:86vw;height:86vw;min-width:260px;min-height:260px}}
 
 </style>
 <script>try{if(localStorage.getItem("msi_lock"))document.documentElement.classList.add("locked");}catch(e){}</script>
 </head>
 <body>
-<canvas id="neuralBg" aria-hidden="true"></canvas>
 <div id="lockScreen">
   <div class="logo" style="width:56px;height:56px;font-size:20px">Mi</div>
   <div class="brand" style="font-size:20px">Marak Stock Intelligence</div>
@@ -265,7 +162,7 @@ table th{color:#f0b4b8}
     <div id="alertStatus" class="muted" style="margin-bottom:8px">OFF</div>
     <input id="alertInvite" placeholder="Invite code (only if you were given one)" style="width:100%;margin-bottom:8px">
     <div class="row"><button id="alertEnable">Enable on this phone</button><button class="secondary" id="alertTest">Send test alert</button><button class="ghost" id="alertOff">Turn off</button></div>
-    <div class="footNote">When one of your saved support/resistance lines is touched, this phone gets a notification from this app within a few seconds, even when the app is closed. Your lines and your Upstox token are sent to the alert server so it can watch prices for you. Save your Upstox token in the Options tab first.</div>
+    <div class="footNote">When one of your saved support/resistance lines is touched, this phone gets a notification from this app within a few seconds, even when the app is closed. Your lines and your Upstox token are sent to the alert server so it can watch prices for you. This optional live-data connection is not configured.</div>
   </div>
 </div>
 <div id="chartModal" style="display:none;position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.7);align-items:flex-start;justify-content:center;padding:60px 10px 10px;overflow:auto">
@@ -321,6 +218,22 @@ table th{color:#f0b4b8}
     <div class="footNote">Each stock gets its own live chart, saved lines, tools, depth and closed-app alerts. Up to 30 stocks. Search uses your saved Upstox token. Closed-app alerts cover up to 10 stocks that have saved lines.</div>
   </div>
 </div>
+
+<div id="radialWatchOverlay" aria-hidden="true">
+  <div id="radialWatchStage">
+    <svg id="radialWatchSvg" viewBox="0 0 360 360" role="listbox" aria-label="Radial watchlist selector">
+      <defs><radialGradient id="radialGloss" cx="28%" cy="20%" r="80%"><stop offset="0%" stop-color="#ff8b97"/><stop offset="40%" stop-color="#d72a3d"/><stop offset="100%" stop-color="#4b0a16"/></radialGradient></defs>
+      <circle cx="180" cy="180" r="157" fill="rgba(255,255,255,.035)" stroke="rgba(255,255,255,.18)" stroke-width="1"/>
+      <g id="radialWatchSectors"></g>
+      <circle class="center-disc" cx="180" cy="180" r="53"/>
+      <text x="180" y="176" class="sector-label" style="font-size:12px">MARAK</text>
+      <text x="180" y="193" class="sector-label" style="font-size:9px">WATCHLIST</text>
+    </svg>
+    <div id="radialWatchHint">Hold · slide to a stock · release to open</div>
+  </div>
+</div>
+<button id="radialWatchLauncher" type="button" aria-label="Hold to open radial stock watchlist" title="Hold and slide to choose a watchlist stock">★</button>
+
 <header>
   <div class="logo">Mi</div>
   <div class="brand">Marak Stock Intelligence<small>Marak Innovation · offline-first</small></div>
@@ -337,15 +250,6 @@ table th{color:#f0b4b8}
 <div id="indexTicker" style="display:flex;gap:26px;padding:8px 16px;background:var(--card2);border-bottom:1px solid var(--border);font-size:13px;align-items:center;overflow-x:auto">
   <span class="muted">Indices: —</span>
 </div>
-
-<section class="hybridWelcome" aria-label="Welcome to Marak Stock Intelligence">
-  <div>
-    <div class="eyebrow">MARAK INNOVATION · STOCK RESEARCH</div>
-    <h1>Smarter analysis.<br>Better decisions.</h1>
-    <p>Explore market structure, machine-learning forecasts, backtests and risk tools in one research workspace.</p>
-  </div>
-  <div class="welcomeMark" aria-hidden="true">✳</div>
-</section>
 
 <main>
 
@@ -370,12 +274,12 @@ table th{color:#f0b4b8}
         <button class="tabbtn" data-tab="scen" data-serial="05">05 · Scenarios</button>
         <button class="tabbtn" data-tab="dna" data-serial="06">06 · Stock DNA</button>
         <button class="tabbtn" data-tab="psych" data-serial="07">07 · Psychology</button>
-        <button class="tabbtn" data-tab="ai" data-serial="11">11 · Ask AI</button>
-        <button class="tabbtn" data-tab="mlpred" data-serial="12">12 · ML Predictions</button>
-        <button class="tabbtn" data-tab="backtest" data-serial="13">13 · Backtesting</button>
-        <button class="tabbtn" data-tab="sentiment" data-serial="14">14 · News & Sentiment</button>
-        <button class="tabbtn" data-tab="csvscanner" data-serial="15">15 · CSV Scanner</button>
-        <button class="tabbtn" data-tab="riskmanage" data-serial="16">16 · Risk Management</button>
+        <button class="tabbtn" data-tab="ai" data-serial="08">08 · Ask AI</button>
+        <button class="tabbtn" data-tab="mlpred" data-serial="09">09 · ML Predictions</button>
+        <button class="tabbtn" data-tab="backtest" data-serial="10">10 · Backtesting</button>
+        <button class="tabbtn" data-tab="sentiment" data-serial="11">11 · News & Sentiment</button>
+        <button class="tabbtn" data-tab="csvscanner" data-serial="12">12 · CSV Scanner</button>
+        <button class="tabbtn" data-tab="riskmanage" data-serial="13">13 · Risk Management</button>
       </div>
 
   <section class="card" id="smartScannerCard" style="display:none" aria-live="polite">
@@ -554,7 +458,7 @@ table th{color:#f0b4b8}
           <button id="whyBtn">Investigate this session</button>
         </div>
         <div class="tl" id="whyTimeline" style="margin-top:14px"></div>
-        <div class="footNote">News, FII/DII and options triggers only appear if the Upstox module is connected (Options tab). Otherwise this is a price/volume/technical forensic trail only.</div>
+        <div class="footNote">News-based explanations appear only when supporting headlines are available. Otherwise this is a price/volume/technical forensic trail only.</div>
       </div>
     </div>
 
@@ -571,47 +475,15 @@ table th{color:#f0b4b8}
       </div>
     </div>
 
-    <!-- OPTIONS / INSTITUTIONAL (UPSTOX) -->
-    <div class="tabpane" id="tab-options">
-      <div class="card">
-        <h3>Find instrument key</h3>
-        <div class="row">
-          <input id="instrLookupSymbol" placeholder="Trading symbol, e.g. JUBLFOOD" style="flex:1;min-width:160px">
-          <button id="instrLookupBtn">Search</button>
-        </div>
-        <div id="instrLookupStatus" class="footNote"></div>
-        <div id="instrLookupResults" style="margin-top:8px"></div>
-        <div class="footNote">Downloads Upstox's public NSE instrument file once per session (~60MB) and searches it locally — unreliable on mobile browsers (large file can freeze the tab). For known/common stocks, it's faster to just ask Claude for the ISIN and build the key yourself as <code>NSE_EQ|&lt;ISIN&gt;</code>.</div>
-        <div class="footNote">Available F&O expiries for a symbol: NSE publishes these; ask Claude if you're unsure of the exact date, or check the Upstox app's option chain screen for that stock.</div>
-      </div>
-      <div class="card">
-        <h3>Upstox connection</h3>
-        <div class="settingsGrid">
-          <input id="upstoxToken" placeholder="Upstox Access Token">
-          <input id="upstoxInstrumentKey" placeholder="Instrument key (e.g. NSE_EQ|INE002A01018)">
-        </div>
-        <div class="row" style="margin-top:8px">
-          <input id="upstoxExpiry" placeholder="Expiry date (YYYY-MM-DD)" style="width:180px">
-          <button id="upstoxFetchBtn">Fetch option chain</button>
-          <button class="secondary" id="upstoxSaveBtn">Save token</button>
-        </div>
-        <div id="expiryChips" style="margin-top:8px"></div>
-        <div class="footNote">You said you don't have Upstox API access yet — register at <b>upstox.com/developer</b>, create an app, complete OAuth login to get an access token (valid ~1 trading day), and find the instrument key for the stock in Upstox's published instrument master (NSE.json). This panel is fully wired once you paste a token.</div>
-        <div id="upstoxStatus" class="footNote"></div>
-      </div>
-      <div class="card">
-        <h3>Options snapshot</h3>
-        <div id="optionsGrid" class="grid3"></div>
-        <div id="optionsTableWrap" style="margin-top:10px;max-height:280px;overflow:auto"></div>
-      </div>
-      <div class="card">
-        <h3>FII / DII activity</h3>
-        <div class="muted">NSE's own data is blocked by a login/cookie wall no proxy can complete. This instead reads Upstox's public FII/DII page — no login needed there, but it works by parsing their webpage, so it can break if Upstox redesigns that page. Cash-market segment only.</div>
-        <div class="row" style="margin-top:8px">
-          <button class="secondary" id="fiiFetchBtn">Fetch FII/DII (via Upstox page)</button>
-        </div>
-        <div id="fiiResult" style="margin-top:8px"></div>
-      </div>
+
+    <!-- Legacy compatibility nodes only: Options / Institutional UI removed as requested. -->
+    <div id="legacyOptionsCompatibility" hidden aria-hidden="true">
+      <input id="instrLookupSymbol"><button id="instrLookupBtn" type="button"></button>
+      <div id="instrLookupStatus"></div><div id="instrLookupResults"></div>
+      <input id="upstoxToken"><input id="upstoxInstrumentKey"><input id="upstoxExpiry">
+      <button id="upstoxFetchBtn" type="button"></button><button id="upstoxSaveBtn" type="button"></button>
+      <div id="expiryChips"></div><div id="upstoxStatus"></div><div id="optionsGrid"></div>
+      <div id="optionsTableWrap"></div><button id="fiiFetchBtn" type="button"></button><div id="fiiResult"></div>
     </div>
 
     <!-- AI ASSISTANT -->
@@ -631,29 +503,17 @@ table th{color:#f0b4b8}
           <input id="chatInput" placeholder='e.g. "Are institutions accumulating?"' style="flex:1">
           <button id="chatSendBtn">Ask</button>
         </div>
-        <div class="footNote">The AI answers only from the computed structure/DNA/smart-money/options data currently loaded for this stock. It does not browse the web, and if data is missing (for example no Upstox connection) it should say so rather than invent numbers.</div>
+        <div class="footNote">The AI answers only from computed structure, Stock DNA and price/volume evidence currently loaded for this stock. It does not browse the web, and if data is missing (for example no Upstox connection) it should say so rather than invent numbers.</div>
       </div>
     </div>
 
     <!-- NEW FEATURES, KEPT IN THE SAME NUMBERED SECTION STYLE -->
     <div class="tabpane" id="tab-mlpred">
-      <div class="card"><h3>12 · ML Predictions</h3>
+      <div class="card"><h3>09 · ML Predictions</h3>
         <p class="muted">Explore a visual representation of how historical market features can flow through a machine-learning model. This animation is illustrative; it is not a live view of internal model weights or proof of forecast accuracy.</p>
         <div class="neuralHero" id="neuralHero">
-          <div class="neuralHead"><div><div class="neuralEyebrow">MARAK · MODEL VISUALIZATION</div><div class="neuralTitle">Crimson 3D Neural Network</div><div style="font-size:10px;color:#ff9aa5;margin-top:4px;letter-spacing:.08em">✦ TOUCH · DRAG · ROTATE</div></div><span class="neuralStatus" id="neuralStatus">● VISUALIZATION ACTIVE</span></div>
-          <canvas id="neuralCanvas" role="img" aria-label="Interactive 3D market-factor visualization; node highlights update from actual available model inputs">Neural network visualization.</canvas>
-          <div class="neuralLivePanel" id="neuralLivePanel" aria-live="polite">
-            <div class="neuralLiveTop"><span class="neuralLiveLabel">LIVE MODEL INPUTS</span><span class="neuralLiveSymbol" id="neuralLiveSymbol">Waiting for stock analysis</span></div>
-            <div class="neuralLiveGrid">
-              <div class="neuralLiveMetric"><div class="k">5-session return</div><div class="v" id="neuralFactor5d">—</div><div class="d">Price momentum</div></div>
-              <div class="neuralLiveMetric"><div class="k">20-session return</div><div class="v" id="neuralFactor20d">—</div><div class="d">Medium-term move</div></div>
-              <div class="neuralLiveMetric"><div class="k">Return volatility</div><div class="v" id="neuralFactorVol">—</div><div class="d">Recent daily variation</div></div>
-              <div class="neuralLiveMetric"><div class="k">Volume vs average</div><div class="v" id="neuralFactorVolume">—</div><div class="d">Latest / 20-session average</div></div>
-              <div class="neuralLiveMetric"><div class="k">SMA relationship</div><div class="v" id="neuralFactorTrend">—</div><div class="d">20-session vs 50-session</div></div>
-              <div class="neuralLiveMetric"><div class="k">1-session model</div><div class="v" id="neuralFactorForecast">—</div><div class="d" id="neuralFactorForecastDetail">Actual model output when available</div></div>
-            </div>
-            <div class="neuralLiveNote" id="neuralLiveNote">This panel is waiting for a selected stock's calculated data. Animated connections are illustrative; highlighted node groups reflect the five actual feature inputs used by the direction model.</div>
-          </div>
+          <div class="neuralHead"><div><div class="neuralEyebrow">MARAK · MODEL VISUALIZATION</div><div class="neuralTitle">3D Neural Network</div></div><span class="neuralStatus" id="neuralStatus">● VISUALIZATION ACTIVE</span></div>
+          <canvas id="neuralCanvas" role="img" aria-label="Animated perspective neural network with connected nodes representing market inputs, model layers, and an output estimate">Neural network visualization.</canvas>
           <div class="neuralFoot"><div class="neuralStages"><span class="neuralStage"><b>01</b> Market inputs</span><span class="neuralStage"><b>02</b> Hidden layers</span><span class="neuralStage"><b>03</b> Direction estimate</span></div><button class="secondary" id="neuralPause" type="button" aria-pressed="false">Ⅱ Pause animation</button></div>
         </div>
         <div class="footNote">Conceptual visualization only. The app's actual estimates depend on the selected stock and historical candles loaded from CSV. Predictions are not calibrated probabilities or guaranteed outcomes.</div>
@@ -661,21 +521,29 @@ table th{color:#f0b4b8}
       </div>
     </div>
     <div class="tabpane" id="tab-backtest">
-      <div class="card"><h3>13 · Backtesting & Validation</h3>
+      <div class="card"><h3>10 · Backtesting & Validation</h3>
         <p class="muted">Walk-forward historical evaluation runs automatically for the selected stock when enough CSV history is available. The live panel reports sample size and available performance metrics across 1-, 5- and 20-session horizons.</p>
         <div class="footNote">Historical results can be noisy and may not reflect executable fills. Cost assumptions are illustrative; taxes, liquidity, slippage and market impact may differ.</div>
+        <div class="card" style="margin-top:12px">
+          <h3>Prediction Accuracy Intelligence</h3>
+          <p class="muted">Runs the existing chronological walk-forward evaluator against the selected stock's imported OHLCV history. Results are historical simulations, not live-trading results.</p>
+          <button class="secondary" id="accuracyRefreshBtn" type="button">Evaluate prediction history</button>
+          <div id="predictionAccuracyPanel" style="margin-top:10px"></div>
+          <div class="footNote">Accuracy is meaningful only with enough independent test observations. Compare with the baseline, inspect sample size, and do not treat a high historical score as a guarantee.</div>
+        </div>
+
         <button class="secondary" type="button" data-jump="intelDashboard">Open automatic validation results ↑</button>
       </div>
     </div>
     <div class="tabpane" id="tab-sentiment">
-      <div class="card"><h3>14 · News & Sentiment</h3>
+      <div class="card"><h3>11 · News & Sentiment</h3>
         <p class="muted">Recent headline lookup and keyword-based sentiment are shown for the selected stock in the Intelligence Dashboard. News availability and relevance can vary by symbol.</p>
         <div class="footNote">Sentiment is a simple text signal, not a verified assessment of company fundamentals. Check original reporting before acting.</div>
         <button class="secondary" type="button" data-jump="intelDashboard">Open live headline sentiment ↑</button>
       </div>
     </div>
     <div class="tabpane" id="tab-csvscanner">
-      <div class="card"><h3>15 · CSV Scanner</h3>
+      <div class="card"><h3>12 · CSV Scanner</h3>
         <p class="muted">Upload one or more OHLCV CSV files using the “Load stock data” box at the top. The scanner only ranks symbols present in the uploaded data; it does not silently add the whole NSE universe.</p>
         <div class="footNote">Expected fields include Date, Open, High, Low, Close and Volume. Header detection accepts common variants. Add more historical sessions for stronger analysis.</div>
         <div class="row"><button class="secondary" type="button" data-jump="csvFile">Go to CSV upload ↑</button><button class="secondary" type="button" data-jump="smartScannerCard">Open Smart Stock Scanner ↑</button></div>
@@ -703,131 +571,109 @@ table th{color:#f0b4b8}
 
 <script>
 
-/* ============ Crimson 3D neural network visualization ============ */
+/* ============ Decorative 3D-style neural network visualization ============ */
 (function initNeuralNetworkVisual(){
   const canvas=document.getElementById('neuralCanvas');
   const pauseBtn=document.getElementById('neuralPause');
   const status=document.getElementById('neuralStatus');
   if(!canvas||!pauseBtn||!status)return;
-  const ctx=canvas.getContext('2d'); if(!ctx)return;
+  const ctx=canvas.getContext('2d');
+  if(!ctx)return;
   const reduced=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let width=0,height=0,dpr=1,frame=0,angleY=0,angleX=-.12,paused=!!reduced,last=0,phase=0;
-  const pointer={x:-1000,y:-1000,down:false,lastX:0,lastY:0,active:false};
-  let liveFactorScores=[0,0,0,0,0],liveDataConnected=false;
-  const nodes=[],edges=[];
-  // Fibonacci-sphere points create a dense, orb-like network with real 3D depth.
-  const count=92, golden=Math.PI*(3-Math.sqrt(5));
-  for(let i=0;i<count;i++){
-    const yy=1-2*(i+.5)/count, radius=Math.sqrt(Math.max(0,1-yy*yy)), theta=golden*i;
-    nodes.push({x:Math.cos(theta)*radius,y:yy,z:Math.sin(theta)*radius,idx:i,layer:i%5});
-  }
-  // Connect each node to its nearest neighbours; use a set to avoid duplicate edges.
-  const edgeSet=new Set();
-  nodes.forEach((a,i)=>{
-    const near=nodes.map((b,j)=>({j,d:(a.x-b.x)**2+(a.y-b.y)**2+(a.z-b.z)**2})).filter(v=>v.j!==i).sort((a,b)=>a.d-b.d).slice(0,4);
-    near.forEach(v=>{const lo=Math.min(i,v.j),hi=Math.max(i,v.j),key=lo+'-'+hi;if(!edgeSet.has(key)){edgeSet.add(key);edges.push({a:lo,b:hi,seed:(lo*13+hi*7)%101/101});}});
-  });
-  window.updateMSINeuralState=function(data){
-    if(!data||!Array.isArray(data.features))return;
-    const put=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value;};
-    const pct=v=>Number.isFinite(v)?(v>=0?'+':'')+(v*100).toFixed(2)+'%':'—';
-    const hasFeatures=data.features.length>=5&&data.features.slice(0,5).every(Number.isFinite);
-    liveDataConnected=hasFeatures;
-    liveFactorScores=hasFeatures?data.features.slice(0,5).map(v=>Math.max(-1,Math.min(1,v))):[0,0,0,0,0];
-    put('neuralLiveSymbol',(data.symbol||'Selected stock')+' · '+(data.date||'latest loaded session'));
-    if(!hasFeatures){
-      ['neuralFactor5d','neuralFactor20d','neuralFactorVol','neuralFactorVolume','neuralFactorTrend'].forEach(id=>put(id,'—'));
-      put('neuralFactorForecast','Unavailable');
-      put('neuralFactorForecastDetail','Load sufficient price history for model inputs');
-      put('neuralStatus','● INSUFFICIENT DATA');
-      put('neuralLiveNote','A stock is selected, but the current feature vector is unavailable. Load sufficient historical candles. Animated connections remain illustrative.');
-      draw();return;
-    }
-    put('neuralFactor5d',pct(data.features[0]));
-    put('neuralFactor20d',pct(data.features[1]));
-    put('neuralFactorVol',Number.isFinite(data.features[2])?(data.features[2]*100).toFixed(2)+'%':'—');
-    put('neuralFactorVolume',Number.isFinite(data.features[3])?((1+data.features[3])*100).toFixed(0)+'%':'—');
-    put('neuralFactorTrend',Number.isFinite(data.features[4])?(data.features[4]>=0?'Above':'Below')+' · '+pct(data.features[4]):'—');
-    put('neuralFactorForecast',data.modelReady?(data.probability>=.55?'↑ Higher':data.probability<=.45?'↓ Lower':'↔ Unclear'):'Unavailable');
-    put('neuralFactorForecastDetail',data.modelReady?('Model-estimated higher-close probability '+(data.probability*100).toFixed(0)+'% · not calibrated'):'Insufficient eligible history for model output');
-    put('neuralStatus','● LIVE DATA CONNECTED');
-    put('neuralLiveNote','Factor node groups now reflect actual calculated inputs from the selected stock. This is a feature-input visualization, not a deep neural network; animated links do not represent learned neural connections.');
+  let width=0,height=0,dpr=1,frame=0,angle=0,paused=!!reduced,last=0;
+  const layers=[5,7,7,5,2];
+  let nodes=[];
+  function resize(){
+    const rect=canvas.getBoundingClientRect();
+    width=Math.max(1,rect.width);height=Math.max(1,rect.height);dpr=Math.min(window.devicePixelRatio||1,2);
+    canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);
+    nodes=[];
+    const xFractions=[.08,.29,.50,.71,.92];
+    layers.forEach((count,li)=>{const layer=[];for(let i=0;i<count;i++){layer.push({x:xFractions[li],y:(i+1)/(count+1),z:(i%2?1:-1)*(.18+((i*7+li*3)%5)*.045),li,i});}nodes.push(layer);});
     draw();
-  };
-  function resize(){const r=canvas.getBoundingClientRect();width=Math.max(1,r.width);height=Math.max(1,r.height);dpr=Math.min(window.devicePixelRatio||1,2);canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);draw();}
-  function project(n){
-    const cy=Math.cos(angleY),sy=Math.sin(angleY),cx=Math.cos(angleX),sx=Math.sin(angleX);
-    const x=n.x*cy-n.z*sy, z=n.x*sy+n.z*cy, y=n.y*cx-z*sx, zz=n.y*sx+z*cx;
-    const perspective=2.7/(2.7+zz*.72), size=Math.min(width*.37,height*.43);
-    return {x:width*.5+x*size*perspective,y:height*.52+y*size*perspective,z:zz,scale:perspective};
+  }
+  function project(n,t){
+    const y=(n.y-.5)*2;
+    const z=n.z;
+    const x=(n.x-.5)*2.1;
+    const rot=angle+t;
+    const xr=x*Math.cos(rot)-z*Math.sin(rot);
+    const zr=x*Math.sin(rot)+z*Math.cos(rot);
+    const perspective=1/(1+zr*.19);
+    return {x:width*.5+xr*width*.43*perspective,y:height*.51+y*height*.37*perspective,z:zr,scale:perspective};
   }
   function draw(){
     ctx.clearRect(0,0,width,height);
-    // Deep red radial atmosphere behind the network core.
-    const cx=width*.5,cy=height*.51,orb=Math.min(width*.42,height*.47);
-    const bg=ctx.createRadialGradient(cx,cy,orb*.04,cx,cy,orb*1.2);
-    bg.addColorStop(0,'rgba(125,5,24,.24)');bg.addColorStop(.48,'rgba(70,3,14,.13)');bg.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=bg;ctx.fillRect(0,0,width,height);
-    // Orbit rings give the orb a stronger dimensional silhouette.
-    ctx.save();ctx.translate(cx,cy);ctx.strokeStyle='rgba(255,53,76,.16)';ctx.lineWidth=1;
-    ctx.beginPath();ctx.ellipse(0,0,orb*.95,orb*.30,angleY*.35,0,Math.PI*2);ctx.stroke();
-    ctx.beginPath();ctx.ellipse(0,0,orb*.72,orb*.96,angleY*.2,0,Math.PI*2);ctx.stroke();
-    ctx.beginPath();ctx.ellipse(0,0,orb*.96,orb*.43,-angleY*.5,0,Math.PI*2);ctx.stroke();ctx.restore();
-    const pts=nodes.map(n=>project(n));
-    // Connections dim naturally as they rotate into the far side of the orb.
-    edges.forEach((e,i)=>{
-      const a=pts[e.a],b=pts[e.b],depth=(a.z+b.z+2)/4;
-      const pulse=(Math.sin(phase*2.1+e.seed*12)+1)/2;
-      const alpha=.045+Math.max(0,depth)*.17+pulse*.045;
-      ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);
-      ctx.strokeStyle=`rgba(255,${Math.round(28+pulse*32)},${Math.round(48+pulse*32)},${alpha})`;
-      ctx.lineWidth=.45+Math.max(0,depth)*.55;ctx.stroke();
-    });
-    // Traveling signal pulses on a rotating selection of connections.
-    if(!paused)edges.forEach((e,i)=>{
-      if(i%7!==0)return;
-      const p=(phase*.22+e.seed)%1,a=pts[e.a],b=pts[e.b],x=a.x+(b.x-a.x)*p,y=a.y+(b.y-a.y)*p;
-      const depth=(a.z+b.z+2)/4,r=1.1+Math.max(0,depth)*1.1;
-      ctx.beginPath();ctx.arc(x,y,r*3.5,0,Math.PI*2);ctx.fillStyle='rgba(255,36,62,.12)';ctx.fill();
-      ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fillStyle='#ff9aa5';ctx.fill();
-    });
-    // Draw far nodes first, then near nodes; layered glow makes the depth obvious.
-    pts.map((p,i)=>({p,n:nodes[i]})).sort((a,b)=>a.p.z-b.p.z).forEach(({p,n})=>{
-      const depth=(p.z+1.4)/2.8,r=(1.35+depth*2.1)*p.scale;
-      ctx.beginPath();ctx.arc(p.x,p.y,r*5.4,0,Math.PI*2);ctx.fillStyle=`rgba(255,30,57,${.025+depth*.07})`;ctx.fill();
-      ctx.beginPath();ctx.arc(p.x,p.y,r*2.25,0,Math.PI*2);ctx.fillStyle=`rgba(255,48,70,${.12+depth*.16})`;ctx.fill();
-      const factor=liveFactorScores[n.layer]||0;
-      const factorStrength=Math.min(1,Math.abs(factor));
-      const baseColor=factor>0.12?'255,105,115':factor<-.12?'255,185,92':'255,70,93';
-      ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);
-      ctx.fillStyle=liveDataConnected?`rgba(${baseColor},${Math.min(1,.48+factorStrength*.48)})`:(depth>.68?'#ff9aa5':depth>.35?'#ff465d':'#a9152a');ctx.fill();
-      if(depth>.55){ctx.beginPath();ctx.arc(p.x-r*.24,p.y-r*.27,Math.max(.45,r*.27),0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,.95)';ctx.fill();}
-    });
-    // A small bright core and a rotating sweep imply active computation (visual only).
-    const core=ctx.createRadialGradient(cx,cy,1,cx,cy,orb*.22);core.addColorStop(0,'rgba(255,65,86,.11)');core.addColorStop(1,'rgba(255,20,45,0)');ctx.fillStyle=core;ctx.beginPath();ctx.arc(cx,cy,orb*.22,0,Math.PI*2);ctx.fill();
-    ctx.save();ctx.translate(cx,cy);ctx.rotate(-phase*.16);ctx.strokeStyle='rgba(255,74,94,.25)';ctx.lineWidth=1;ctx.beginPath();ctx.arc(0,0,orb*.86,-.24,.28);ctx.stroke();ctx.restore();
-    if(pointer.active){const radius=Math.max(60,Math.min(112,width*.2)),g=ctx.createRadialGradient(pointer.x,pointer.y,2,pointer.x,pointer.y,radius);g.addColorStop(0,'rgba(255,34,60,.22)');g.addColorStop(1,'rgba(255,34,60,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(pointer.x,pointer.y,radius,0,Math.PI*2);ctx.fill();
-      pts.forEach(p=>{const d=Math.hypot(p.x-pointer.x,p.y-pointer.y);if(d<radius){const k=1-d/radius;ctx.beginPath();ctx.arc(p.x,p.y,2+k*4,0,Math.PI*2);ctx.strokeStyle=`rgba(255,${Math.round(80+100*k)},${Math.round(95+100*k)},${.3+.6*k})`;ctx.lineWidth=1+k;ctx.stroke();}});
+    const all=[];nodes.forEach(layer=>layer.forEach(n=>all.push({n,p:project(n,0)})));
+    // Fine perspective grid gives depth without competing with app data.
+    ctx.save();ctx.strokeStyle='rgba(77,151,201,.09)';ctx.lineWidth=1;
+    for(let i=0;i<7;i++){const y=height*.55+i*i*height*.009;ctx.beginPath();ctx.moveTo(width*.08,y);ctx.lineTo(width*.92,y);ctx.stroke();}
+    for(let i=0;i<9;i++){const x=width*(.12+i*.095);ctx.beginPath();ctx.moveTo(width*.5+(x-width*.5)*.5,height*.26);ctx.lineTo(x,height*.86);ctx.stroke();}ctx.restore();
+    // Connections between adjacent layers.
+    for(let li=0;li<nodes.length-1;li++){
+      nodes[li].forEach((a,ai)=>nodes[li+1].forEach((b,bi)=>{
+        const pa=project(a,0),pb=project(b,0);const pulse=(Math.sin(angle*2+li*1.7+ai*.6+bi*.35)+1)/2;
+        ctx.beginPath();ctx.moveTo(pa.x,pa.y);ctx.lineTo(pb.x,pb.y);
+        ctx.strokeStyle=`rgba(63,174,236,${.09+pulse*.18})`;ctx.lineWidth=.55+pulse*.35;ctx.stroke();
+      }));
     }
-    // Labels stay clear of the network on both desktop and mobile.
-    ctx.textAlign='center';ctx.font='800 9px system-ui,sans-serif';ctx.fillStyle='rgba(255,171,181,.78)';ctx.fillText('LIVE NEURAL TOPOLOGY',width*.5,Math.max(42,height*.15));
+    // Animated signal particles travel along selected connections.
+    if(!paused){for(let li=0;li<nodes.length-1;li++)for(let k=0;k<3;k++){
+      const a=nodes[li][(k*2+li)%nodes[li].length],b=nodes[li+1][(k*3+1)%nodes[li+1].length];
+      const p=(angle*1.8+k*.31+li*.22)%1,pa=project(a,0),pb=project(b,0);
+      const x=pa.x+(pb.x-pa.x)*p,y=pa.y+(pb.y-pa.y)*p;
+      ctx.beginPath();ctx.arc(x,y,1.5+(Math.sin(angle*3+k)+1)*.5,0,Math.PI*2);ctx.fillStyle='rgba(129,220,255,.95)';ctx.fill();
+    }}
+    // Nodes: soft cyan cores, brighter output layer.
+    all.sort((a,b)=>a.p.z-b.p.z).forEach(({n,p})=>{
+      const r=(n.li===4?4.2:2.8)*p.scale;
+      ctx.beginPath();ctx.arc(p.x,p.y,r*2.5,0,Math.PI*2);ctx.fillStyle=n.li===4?'rgba(91,235,183,.10)':'rgba(67,174,255,.10)';ctx.fill();
+      ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fillStyle=n.li===4?'#7ef2c1':'#7bd5ff';ctx.fill();
+      ctx.beginPath();ctx.arc(p.x-r*.25,p.y-r*.25,Math.max(.6,r*.3),0,Math.PI*2);ctx.fillStyle='#ffffff';ctx.fill();
+    });
+    // Layer captions, kept inside the canvas.
+    ctx.textAlign='center';ctx.font='10px system-ui, sans-serif';
+    const labels=['INPUTS','FEATURES','HIDDEN LAYER','SIGNAL','OUTPUT'];
+    labels.forEach((label,i)=>{ctx.fillStyle='rgba(175,211,236,.76)';ctx.fillText(label,width*([.08,.29,.50,.71,.92][i]),height*.91);});
   }
-  function tick(ts){if(paused)return;if(ts-last>24){last=ts;phase+=.026;angleY+=.0038;angleX+=Math.sin(phase*.22)*.0007;draw();}frame=requestAnimationFrame(tick);}
-  function setPaused(next){paused=next;pauseBtn.textContent=paused?'▶ Resume animation':'Ⅱ Pause animation';pauseBtn.setAttribute('aria-pressed',String(paused));status.textContent=paused?'Ⅱ VISUALIZATION PAUSED':'● NEURAL ENGINE ACTIVE';if(frame)cancelAnimationFrame(frame);frame=0;if(!paused){last=0;frame=requestAnimationFrame(tick);}else draw();}
-  function point(e){const r=canvas.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top};}
-  canvas.addEventListener('pointerdown',e=>{const p=point(e);pointer.x=p.x;pointer.y=p.y;pointer.lastX=p.x;pointer.lastY=p.y;pointer.down=true;pointer.active=true;canvas.style.cursor='grabbing';try{canvas.setPointerCapture(e.pointerId);}catch(_){}draw();});
-  canvas.addEventListener('pointermove',e=>{const p=point(e);pointer.x=p.x;pointer.y=p.y;pointer.active=true;if(pointer.down){angleY+=(p.x-pointer.lastX)*.009;angleX+=(p.y-pointer.lastY)*.009;angleX=Math.max(-1.15,Math.min(1.15,angleX));pointer.lastX=p.x;pointer.lastY=p.y;}draw();},{passive:true});
-  function release(){pointer.down=false;canvas.style.cursor='grab';}canvas.addEventListener('pointerup',release);canvas.addEventListener('pointercancel',release);canvas.addEventListener('lostpointercapture',release);canvas.addEventListener('pointerleave',()=>{if(!pointer.down){pointer.active=false;draw();}});canvas.addEventListener('contextmenu',e=>e.preventDefault());
+  function tick(ts){if(paused)return;if(ts-last>28){last=ts;angle+=.006;draw();}frame=requestAnimationFrame(tick);}
+  function setPaused(next){paused=next;pauseBtn.textContent=paused?'▶ Resume animation':'Ⅱ Pause animation';pauseBtn.setAttribute('aria-pressed',String(paused));status.textContent=paused?'Ⅱ VISUALIZATION PAUSED':'● VISUALIZATION ACTIVE';if(frame)cancelAnimationFrame(frame);frame=0;if(!paused){last=0;frame=requestAnimationFrame(tick);}else draw();}
   pauseBtn.addEventListener('click',()=>setPaused(!paused));
   if('ResizeObserver'in window)new ResizeObserver(resize).observe(canvas);else window.addEventListener('resize',resize);
   document.addEventListener('visibilitychange',()=>{if(document.hidden){if(frame)cancelAnimationFrame(frame);frame=0;}else if(!paused){last=0;frame=requestAnimationFrame(tick);}});
-  function refreshWhenVisible(){const pane=document.getElementById('tab-mlpred');if(!pane||!pane.classList.contains('active'))return;requestAnimationFrame(()=>{resize();requestAnimationFrame(resize);});}
-  if('ResizeObserver'in window){const hero=document.getElementById('neuralHero');if(hero)new ResizeObserver(refreshWhenVisible).observe(hero);}
-  const mlPane=document.getElementById('tab-mlpred');if(mlPane&&'MutationObserver'in window)new MutationObserver(refreshWhenVisible).observe(mlPane,{attributes:true,attributeFilter:['class']});
+  // Initialize safely even when this tab starts hidden on mobile.
+  function refreshWhenVisible(){
+    const pane=document.getElementById('tab-mlpred');
+    if(!pane || !pane.classList.contains('active')) return;
+    requestAnimationFrame(()=>{resize();requestAnimationFrame(resize);});
+  }
+  if('ResizeObserver' in window){
+    const hero=document.getElementById('neuralHero');
+    if(hero) new ResizeObserver(()=>refreshWhenVisible()).observe(hero);
+  }
+  // The canvas may measure as 0px while its numbered tab is hidden.
+  const mlPane=document.getElementById('tab-mlpred');
+  if(mlPane && 'MutationObserver' in window){
+    new MutationObserver(refreshWhenVisible).observe(mlPane,{attributes:true,attributeFilter:['class']});
+  }
   window.addEventListener('resize',refreshWhenVisible,{passive:true});
-  window.addEventListener('visibilitychange',()=>{if(!document.hidden){refreshWhenVisible();if(!paused&&!frame){last=0;frame=requestAnimationFrame(tick);}}});
-  window.refreshMarakNeuralNetwork=function(){refreshWhenVisible();const pane=document.getElementById('tab-mlpred');if(pane&&pane.classList.contains('active'))requestAnimationFrame(()=>{resize();if(!paused&&!frame){last=0;frame=requestAnimationFrame(tick);}});};
-  resize();setPaused(paused);setTimeout(refreshWhenVisible,250);setTimeout(refreshWhenVisible,900);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden){refreshWhenVisible();if(!paused&&!frame){last=0;frame=requestAnimationFrame(tick);}}});
+  // Expose a safe refresh hook so the tab controller can initialize the canvas
+  // after the hidden ML pane becomes visible (important on mobile browsers).
+  window.refreshMarakNeuralNetwork=function(){
+    refreshWhenVisible();
+    const pane=document.getElementById('tab-mlpred');
+    if(pane && pane.classList.contains('active')){
+      requestAnimationFrame(()=>{
+        resize();
+        if(!paused && !frame){last=0;frame=requestAnimationFrame(tick);}
+      });
+    }
+  };
+  resize();setPaused(paused);
+  // Retry after mobile layout settles and when the user opens ML Predictions.
+  setTimeout(refreshWhenVisible,250);
+  setTimeout(refreshWhenVisible,900);
 })();
 
 /* ============ PWA: real service worker (proper auto-update), install prompt, share ============ */
@@ -1298,7 +1144,7 @@ function renderPsychology(bars, calc, li, volX, trendRegime){
   ];
   document.getElementById('psychGrid').innerHTML = items.map(([label,cls,val])=>
     `<div class="statusline"><span>${label}</span><span class="tag ${cls}">${val}</span></div>`).join('');
-  const summary = `Price is showing a ${trendRegime.replace(/🟢|🔴|🟡/g,'').trim().toLowerCase()} structure with ${volX>1.2?'increasing':'unremarkable'} participation. Momentum is ${calc.rsi[li]>55?'positive':calc.rsi[li]<45?'weak':'neutral'}. Institutional flow, options positioning and news sentiment need the Upstox connection (and a news source) to populate — currently ${upstoxConnected?'connected':'not connected'}.`;
+  const summary = `Price is showing a ${trendRegime.replace(/🟢|🔴|🟡/g,'').trim().toLowerCase()} structure with ${volX>1.2?'increasing':'unremarkable'} participation. Momentum is ${calc.rsi[li]>55?'positive':calc.rsi[li]<45?'weak':'neutral'}. Direct institutional identity cannot be inferred from candles. This read uses price, volume and available delivery data only.`;
   document.getElementById('psychSummary').textContent = summary;
 }
 
@@ -1368,6 +1214,14 @@ function renderSmartMoney(bars, calc, li, volX){
     <div class="kv"><span>Failed breakout</span><span>${failedBreakout?'🔴 Flagged':'— none'}</span></div>
     ${evidence!=null ? `<div class="kv"><span style="font-weight:700">Evidence strength</span><span style="font-weight:700">${evidence}/100</span></div>` : ''}
   `;
+
+  // Historical volume anomaly: compare current volume with the prior 20 sessions only.
+  const priorVol=bars.slice(Math.max(0,li-20),li).map(b=>Number(b.volume)||0).filter(v=>v>0).sort((a,b)=>a-b);
+  const priorMedian=priorVol.length?priorVol[Math.floor(priorVol.length/2)]:null;
+  const volumeVsMedian=priorMedian&&bars[li].volume>0?bars[li].volume/priorMedian:null;
+  const anomalyLabel=volumeVsMedian==null?'Not enough usable volume history':volumeVsMedian>=2?'Unusually high volume (≥2× prior median)':volumeVsMedian>=1.5?'Elevated volume (≥1.5× prior median)':volumeVsMedian<=0.5?'Unusually low volume (≤0.5× prior median)':'Volume near historical baseline';
+  panel.innerHTML += `<div class="card" style="margin-top:10px"><h4 style="margin:0 0 6px">AI-style volume anomaly evidence</h4><b>${anomalyLabel}</b><div class="kv"><span>Volume vs prior 20-session median</span><span>${volumeVsMedian==null?'n/a':volumeVsMedian.toFixed(2)+'×'}</span></div><div class="footNote">This is a rule-based historical comparison, not proof of institutional trading or a verified AI model. Possible accumulation/distribution labels describe price-volume behaviour only.</div></div>`;
+
   return { quadrant, failedBreakout, possibleDistribution, evidence };
 }
 
@@ -2719,7 +2573,7 @@ function setWatch(w){
 }
 function setWMsg(t){ byId('watchMsg').textContent=t||''; }
 async function searchStocks(q){
-  const token=getGlobalUpstoxToken(); if(!token) throw new Error('Save your Upstox token in the Options tab first.');
+  const token=getGlobalUpstoxToken(); if(!token) throw new Error('This optional live-data connection is not configured.');
   const base='https://api.upstox.com/v2/instruments/search?query='+encodeURIComponent(q.slice(0,50))+'&exchanges=NSE';
   let rows=[];
   for(const extra of ['&segments=EQ&instrument_types=EQ&page_number=1&records=15','&page_number=1&records=30']){
@@ -2868,7 +2722,7 @@ function statsOf(){ return chartName&&statCache[chartName]?statCache[chartName].
 function touchTxt(price){ const r=statsOf(); if(!r) return ''; const S=tickLast||chartLast||r.S; return ' · 5-day touch chance '+Math.round(touchModel(S,price,r.sigma,5)*100)+'%'; }
 function renderStats(){
   const el=byId('statsBody'), r=statsOf();
-  if(!r){ el.innerHTML='<div class="muted">'+(getGlobalUpstoxToken()?'Loading daily history...':'Save your Upstox token in the Options tab first.')+'</div>'; return; }
+  if(!r){ el.innerHTML='<div class="muted">'+(getGlobalUpstoxToken()?'Loading daily history...':'This optional live-data connection is not configured.')+'</div>'; return; }
   const S=tickLast||chartLast||r.S, f=x=>x.toFixed(2), pc=x=>Math.round(x*100)+'%';
   let html='<div style="font-weight:700;margin-bottom:4px">1. Expected price range</div>'
     +'<div class="muted" style="margin-bottom:4px">Daily volatility '+(r.sigma*100).toFixed(2)+'% (about '+(r.ann*100).toFixed(0)+'% a year), higher than '+pc(r.pct)+' of the last year. Price now '+f(S)+'.</div>'
@@ -3212,10 +3066,6 @@ async function renderIntelDashboard(sym,bars){
   const el=byId('intelDashboardBody');if(!el)return;
   const last=bars[bars.length-1],prev=bars[bars.length-2],chg=prev?(last.close/prev.close-1)*100:0;
   const model=runDirectionModel(bars,1),model5=runDirectionModel(bars,5),model20=runDirectionModel(bars,20),calc=computeAll(bars),i=bars.length-1,rsi=calc.rsi[i],atrp=calc.atr[i]!=null?calc.atr[i]/last.close*100:null;
-  const neuralFeatures=currentMLFeatures(bars);
-  if(typeof window.updateMSINeuralState==='function'){
-    window.updateMSINeuralState({symbol:sym,date:last.date,features:neuralFeatures||[],modelReady:model.ready,probability:model.p});
-  }
   const horizonHtml=(m,label)=>`<div class="intelMetric" id="forecastCard${label.split('-')[0]}"><div class="k">${label} direction estimate</div><div class="v ${m.ready?(m.p>=.55?'up':m.p<=.45?'down':''):''}">${m.ready?(m.p>=.55?'↑ Higher':m.p<=.45?'↓ Lower':'↔ Unclear'):'Temporarily unavailable'}</div><div class="d">${m.ready?`Model-estimated probability of a higher close: ${(m.p*100).toFixed(0)}% · trained on ${m.n} historical examples; experimental and not calibrated.`:`Insufficient history (${m.n} examples; at least 80 training examples are required).`}</div><div class="d" id="validationStatus${label.split('-')[0]}">Walk-forward validation is running below.</div></div>`;
   const modelHtml=horizonHtml(model,'1-session')+horizonHtml(model5,'5-session')+horizonHtml(model20,'20-session');
   el.innerHTML=`<div class="intelGrid"><div class="intelMetric"><div class="k">Last loaded close</div><div class="v">₹${Number(last.close).toLocaleString('en-IN',{maximumFractionDigits:2})}</div><div class="d">${escH(last.date)} · ${chg>=0?'+':''}${chg.toFixed(2)}% vs prior loaded session</div></div>${modelHtml}<div class="intelMetric"><div class="k">Risk snapshot</div><div class="v">${atrp==null?'—':atrp.toFixed(2)+'% ATR'}</div><div class="d">RSI(14): ${rsi==null?'n/a':rsi.toFixed(1)} · ATR as % of last close is a volatility gauge, not a loss limit.</div></div><div class="intelMetric" style="grid-column:1/-1"><div class="k">Automatic historical model test</div><div id="intelBacktest"><div class="d">Runs automatically using only earlier CSV history; large datasets may take a moment.</div></div></div><div class="intelMetric" style="grid-column:1/-1"><div class="k">Headline sentiment</div><div id="intelSentiment"><div class="v">Loading headlines…</div><div class="d">Searching recent news for ${escH(sym)}.</div></div></div></div>`;
@@ -3238,7 +3088,6 @@ async function renderIntelDashboard(sym,bars){
     const q=getNewsTerm(sym)+' when:14d', items=await fetchNewsItems(q);if(currentSymbol!==sym)return;
     const sent=headlineSentiment(items),sentEl=byId('intelSentiment');if(!sentEl)return;
     const cls=sent.score>=20?'up':sent.score<=-20?'down':'';
-    const neuralNote=byId('neuralLiveNote');if(neuralNote)neuralNote.textContent+=' News sentiment is shown separately in the Intelligence Dashboard and is not one of the five inputs used by the current logistic-regression direction model.';
     sentEl.innerHTML=`<div class="row" style="align-items:center;gap:12px"><div class="v ${cls}" style="margin:0">${sent.score>0?'+':''}${sent.score}</div><div><b>${escH(sent.label)}</b><div class="d">${sent.count} headlines scanned · ${sent.positive} positive headlines (${sent.positiveMatches} keyword hits) · ${sent.negative} negative headlines (${sent.negativeMatches} keyword hits)</div></div><span class="intelPill">Heuristic keyword hint · not AI/context-aware</span></div>`+(sent.headlines.length?'<div style="margin-top:8px">'+sent.headlines.map(h=>`<div class="statusline" style="align-items:flex-start"><span style="flex:1">${escH(h.title)}<div class="muted">${h.score>0?'Positive match: '+escH((h.positiveTerms||[]).slice(0,3).join(', ')):h.score<0?'Negative match: '+escH((h.negativeTerms||[]).slice(0,3).join(', ')):(h.positiveTerms?.length&&h.negativeTerms?.length?'Mixed signals: '+escH([...h.positiveTerms,...h.negativeTerms].slice(0,3).join(', ')):'No clear keyword match')}</div></span></div>`).join('')+'</div>':'<div class="muted" style="margin-top:6px">No headlines were returned. Try the News & announcements panel.</div>');
   }catch(e){if(currentSymbol===sym&&byId('intelSentiment'))byId('intelSentiment').innerHTML='<div class="muted">Headline sentiment is temporarily unavailable. The price and model panels above are still available.</div>';}
 }
@@ -3474,60 +3323,125 @@ if(riskCalcBtn) riskCalcBtn.addEventListener('click',()=>{
 
 if(Object.keys(DB).length){ document.getElementById('loadStatus').textContent = `${Object.keys(DB).length} symbol(s) already stored locally.`; }
 </script>
+<script>
+
+/* ============ 3D RADIAL WATCHLIST SELECTOR ============ */
+(function initRadialWatchSelector(){
+  const launcher=document.getElementById('radialWatchLauncher');
+  const overlay=document.getElementById('radialWatchOverlay');
+  const group=document.getElementById('radialWatchSectors');
+  const svg=document.getElementById('radialWatchSvg');
+  if(!launcher||!overlay||!group||!svg)return;
+  let active=false, chosen=-1, stocks=[], pointerId=null, holdTimer=null, openedAt=0;
+  const NS='http://www.w3.org/2000/svg';
+  function point(cx,cy,r,a){const t=(a-90)*Math.PI/180;return [cx+r*Math.cos(t),cy+r*Math.sin(t)];}
+  function wedgePath(a0,a1,r0=58,r1=153){
+    const p1=point(180,180,r1,a0),p2=point(180,180,r1,a1),p3=point(180,180,r0,a1),p4=point(180,180,r0,a0);
+    const large=(a1-a0)>180?1:0;
+    return `M ${p1[0]} ${p1[1]} A ${r1} ${r1} 0 ${large} 1 ${p2[0]} ${p2[1]} L ${p3[0]} ${p3[1]} A ${r0} ${r0} 0 ${large} 0 ${p4[0]} ${p4[1]} Z`;
+  }
+  function render(){
+    stocks=typeof getWatch==='function'?getWatch():[];
+    group.innerHTML='';chosen=-1;
+    if(!stocks.length){
+      const t=document.createElementNS(NS,'text');t.setAttribute('x','180');t.setAttribute('y','260');t.setAttribute('class','sector-label');t.textContent='Add stocks first';group.appendChild(t);return;
+    }
+    const step=360/stocks.length;
+    stocks.forEach((stock,i)=>{
+      const a0=i*step+1.1,a1=(i+1)*step-1.1,mid=(a0+a1)/2;
+      const path=document.createElementNS(NS,'path');path.setAttribute('d',wedgePath(a0,a1));path.setAttribute('class','sector');path.dataset.index=String(i);group.appendChild(path);
+      const [x,y]=point(180,180,105,mid);
+      const label=document.createElementNS(NS,'text');label.setAttribute('x',x);label.setAttribute('y',y);label.setAttribute('class','sector-label');label.dataset.index=String(i);
+      let name=String(stock.sym||'').toUpperCase();
+      const maxChars=stocks.length>18?5:stocks.length>12?7:10;
+      if(name.length>maxChars)name=name.slice(0,maxChars-1)+'…';
+      label.textContent=name;group.appendChild(label);
+    });
+  }
+  function selectAt(clientX,clientY){
+    if(!active||!stocks.length)return;
+    const rect=svg.getBoundingClientRect(),scale=360/rect.width;
+    const x=(clientX-rect.left)*scale,y=(clientY-rect.top)*scale,dx=x-180,dy=y-180;
+    const radius=Math.hypot(dx,dy);
+    let idx=-1;
+    if(radius>=54&&radius<=160){
+      let angle=(Math.atan2(dx,-dy)*180/Math.PI+360)%360;
+      idx=Math.min(stocks.length-1,Math.floor(angle/(360/stocks.length)));
+    }
+    chosen=idx;
+    group.querySelectorAll('.sector').forEach((el,i)=>el.classList.toggle('selected',i===chosen));
+  }
+  function openMenu(){
+    if(active)return;
+    render();active=true;openedAt=Date.now();overlay.classList.add('open');overlay.setAttribute('aria-hidden','false');
+    launcher.setAttribute('aria-expanded','true');
+  }
+  function closeMenu(commit){
+    if(!active)return;
+    active=false;overlay.classList.remove('open');overlay.setAttribute('aria-hidden','true');launcher.setAttribute('aria-expanded','false');
+    const stock=chosen>=0?stocks[chosen]:null;chosen=-1;
+    if(commit&&stock&&typeof openLiveChart==='function'){
+      if(typeof closeWatch==='function')closeWatch();
+      openLiveChart(stock.sym);
+    }
+  }
+  launcher.addEventListener('pointerdown',e=>{
+    if(e.button!==undefined&&e.button!==0)return;
+    e.preventDefault();pointerId=e.pointerId;
+    try{launcher.setPointerCapture(pointerId);}catch(_){}
+    holdTimer=setTimeout(()=>{openMenu();selectAt(e.clientX,e.clientY);},220);
+  });
+  launcher.addEventListener('pointermove',e=>{if(pointerId!==null&&active)selectAt(e.clientX,e.clientY);});
+  function release(e){
+    if(pointerId===null)return;
+    clearTimeout(holdTimer);
+    if(active){selectAt(e.clientX,e.clientY);closeMenu(true);}
+    pointerId=null;
+  }
+  launcher.addEventListener('pointerup',release);
+  launcher.addEventListener('pointercancel',release);
+  launcher.addEventListener('lostpointercapture',()=>{clearTimeout(holdTimer);if(active)closeMenu(false);pointerId=null;});
+  overlay.addEventListener('pointermove',e=>selectAt(e.clientX,e.clientY));
+  overlay.addEventListener('pointerup',e=>{if(active){selectAt(e.clientX,e.clientY);closeMenu(true);pointerId=null;}});
+  overlay.addEventListener('pointercancel',()=>closeMenu(false));
+  overlay.addEventListener('click',e=>{if(e.target===overlay)closeMenu(false);});
+  launcher.addEventListener('click',e=>{
+    // A quick tap opens the existing full watchlist as a useful fallback; a hold opens the radial selector.
+    if(Date.now()-openedAt<250&&!active&&typeof openWatch==='function')openWatch();
+  });
+  window.addEventListener('keydown',e=>{if(e.key==='Escape')closeMenu(false);});
+  // Re-render on watchlist changes and whenever the selector opens.
+  const originalAdd=window.addWatch,originalRemove=window.removeWatch;
+  if(typeof originalAdd==='function')window.addWatch=function(...args){const r=originalAdd.apply(this,args);render();return r;};
+  if(typeof originalRemove==='function')window.removeWatch=function(...args){const r=originalRemove.apply(this,args);setTimeout(render,0);return r;};
+})();
+
+</script>
 
 <script>
-/* Ambient animated neural network shared across every app section. */
+/* ============ PREDICTION ACCURACY INTELLIGENCE ============ */
 (function(){
-  const canvas=document.getElementById('neuralBg');
-  if(!canvas) return;
-  const ctx=canvas.getContext('2d',{alpha:false});
-  if(!ctx) return;
-  let w=0,h=0,dpr=1,pts=[],raf=0,last=0;
-  const pointer={x:0,y:0,tx:0,ty:0,active:false};
-  const reduced=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  function resize(){
-    dpr=Math.min(window.devicePixelRatio||1,1.6);w=window.innerWidth;h=window.innerHeight;
-    canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);
-    canvas.style.width=w+'px';canvas.style.height=h+'px';ctx.setTransform(dpr,0,0,dpr,0,0);
-    const count=Math.max(46,Math.min(150,Math.round(w*h/(w<600?9800:7600))));
-    pts=Array.from({length:count},(_,i)=>({x:Math.random()*w,y:Math.random()*h,z:.25+Math.random()*.75,phase:Math.random()*Math.PI*2,speed:.45+Math.random()*1.05,r:1.15+Math.random()*2.0,hue:[0,3,7,352,355][i%5]}));
-    draw(0);
-  }
-  function draw(t){
-    ctx.fillStyle='#070202';ctx.fillRect(0,0,w,h);
-    const time=(reduced?0:t*.00022);
-    const projected=pts.map((p,i)=>{
-      const x=p.x+Math.sin(time*p.speed*2+p.phase)*24*p.z;
-      const y=p.y+Math.cos(time*p.speed*1.7+p.phase)*21*p.z;
-      return {x,y,z:p.z,r:p.r,hue:p.hue,i};
-    });
-    const maxDist=Math.min(172,Math.max(108,w*.29));
-    for(let i=0;i<projected.length;i++){
-      const a=projected[i];
-      for(let j=i+1;j<projected.length;j++){
-        const b=projected[j],dx=a.x-b.x,dy=a.y-b.y,dist=Math.hypot(dx,dy);
-        if(dist<maxDist){const alpha=(1-dist/maxDist)*.34*Math.min(a.z,b.z);
-          const grad=ctx.createLinearGradient(a.x,a.y,b.x,b.y);
-          grad.addColorStop(0,`hsla(${a.hue},100%,60%,${alpha})`);grad.addColorStop(1,`hsla(${b.hue},100%,65%,${alpha})`);
-          ctx.strokeStyle=grad;ctx.lineWidth=.45+Math.min(a.z,b.z)*.55;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}
+  const btn=document.getElementById('accuracyRefreshBtn'),panel=document.getElementById('predictionAccuracyPanel');
+  if(!btn||!panel)return;
+  const pct=v=>v==null?'—':(v*100).toFixed(1)+'%';
+  btn.addEventListener('click',async()=>{
+    const sym=typeof currentSymbol!=='undefined'&&currentSymbol?currentSymbol:null;
+    const bars=sym&&typeof DB!=='undefined'&&DB[sym]&&DB[sym].bars;
+    if(!bars||bars.length<80){panel.innerHTML='<div class="muted">Select a stock with at least 80 historical OHLCV rows imported from CSV, then try again.</div>';return;}
+    btn.disabled=true;btn.textContent='Evaluating…';panel.innerHTML='<div class="muted">Running chronological walk-forward tests. This may take a moment…</div>';
+    try{
+      const out=[];
+      for(const h of [1,5,20]){
+        const r=await runMLWalkForwardBacktest(bars,h);
+        if(!r.ready){out.push(`<div class="card"><b>${h}-session horizon</b><div class="muted">${r.reason||'Insufficient history'} (test observations: ${r.n||0})</div></div>`);continue;}
+        out.push(`<div class="card"><b>${h}-session horizon</b><div class="grid3" style="margin-top:8px"><div><div class="muted">Direction accuracy</div><b>${pct(r.accuracy)}</b></div><div><div class="muted">Baseline accuracy</div><b>${pct(r.baselineAccuracy)}</b></div><div><div class="muted">Test samples</div><b>${r.n}</b></div><div><div class="muted">Brier score (lower better)</div><b>${r.brier.toFixed(3)}</b></div><div><div class="muted">Strategy return*</div><b>${pct(r.strategyReturn)}</b></div><div><div class="muted">Max drawdown*</div><b>${pct(r.maxDrawdown)}</b></div></div><div class="footNote">Test window: ${r.from} to ${r.to}. Historical simulated result; not a live result. *Illustrative close-to-close assumptions; not executable performance.</div></div>`);
       }
-    }
-    for(const p of projected){
-      const glow=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,10*p.z);
-      glow.addColorStop(0,`hsla(${p.hue},100%,67%,${.7*p.z})`);glow.addColorStop(1,`hsla(${p.hue},100%,55%,0)`);
-      ctx.fillStyle=glow;ctx.beginPath();ctx.arc(p.x,p.y,10*p.z,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle=`hsla(${p.hue},100%,76%,${.72*p.z})`;ctx.beginPath();ctx.arc(p.x,p.y,p.r*p.z,0,Math.PI*2);ctx.fill();
-    }
-    // Soft central glow gives the network a layered, spatial feel without blocking text.
-    const glow=ctx.createRadialGradient(w*.5,h*.42,0,w*.5,h*.42,Math.max(w,h)*.62);
-    glow.addColorStop(0,'rgba(255,18,38,.11)');glow.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=glow;ctx.fillRect(0,0,w,h);
-  }
-  function tick(t){if(t-last>32){draw(t);last=t;}raf=requestAnimationFrame(tick);}
-  resize();
-  if(!reduced) raf=requestAnimationFrame(tick);
-  window.addEventListener('resize',resize,{passive:true});
-  document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelAnimationFrame(raf);raf=0;}else if(!reduced&&!raf)raf=requestAnimationFrame(tick);});
+      panel.innerHTML=`<div style="font-weight:700;margin-bottom:8px">${String(sym).replace(/[&<>]/g,'')} · Prediction vs actual</div>`+out.join('');
+    }catch(err){panel.innerHTML='<div class="muted">Evaluation could not complete: '+String(err&&err.message||err).replace(/[&<>]/g,'')+'</div>';}
+    finally{btn.disabled=false;btn.textContent='Evaluate prediction history';}
+  });
 })();
 </script>
+
 </body>
 </html>
